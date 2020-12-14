@@ -1,0 +1,41 @@
+<record>
+  <leader>     cz  a22     n  4500</leader>
+  <controlfield tag="001">ola200208057</controlfield>
+  <controlfield tag="003">CZ PrNK</controlfield>
+  <controlfield tag="005">20150323081841.0</controlfield>
+  <controlfield tag="008">020529|n|acnnnaabn           n a|a      </controlfield>
+  <datafield tag="040" ind1=" " ind2=" ">
+    <subfield code="a">OLA001</subfield>
+    <subfield code="b">cze</subfield>
+    <subfield code="d">KLG001</subfield>
+    <subfield code="d">ABA001</subfield>
+  </datafield>
+  <datafield tag="046" ind1=" " ind2=" ">
+    <subfield code="f">1945</subfield>
+  </datafield>
+  <datafield tag="100" ind1="1" ind2=" ">
+    <subfield code="a">Ohlídal, Ivan,</subfield>
+    <subfield code="d">1945-</subfield>
+    <subfield code="7">ola200208057</subfield>
+  </datafield>
+  <datafield tag="370" ind1=" " ind2=" ">
+    <subfield code="c">Česko</subfield>
+  </datafield>
+  <datafield tag="667" ind1=" " ind2=" ">
+    <subfield code="a">Záznam neprošel revizí podle pravidel RDA.</subfield>
+  </datafield>
+  <datafield tag="670" ind1=" " ind2=" ">
+    <subfield code="a">www (Vědecká knihovna v Olomouci - REGO)</subfield>
+  </datafield>
+  <datafield tag="670" ind1=" " ind2=" ">
+    <subfield code="a">www (Wikipedie, otevřená encyklopedie), cit. 23. 3. 2015</subfield>
+    <subfield code="b">biografické údaje</subfield>
+  </datafield>
+  <datafield tag="678" ind1="0" ind2=" ">
+    <subfield code="a">Narozen 25. 4. 1945 Březolupy. Český fyzik, vysokoškolský profesor a politik.</subfield>
+  </datafield>
+  <datafield tag="856" ind1="4" ind2="2">
+    <subfield code="u">http://cs.wikipedia.org/wiki/Ivan_Ohl%C3%ADdal</subfield>
+    <subfield code="4">N</subfield>
+  </datafield>
+</record>

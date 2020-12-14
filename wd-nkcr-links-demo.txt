@@ -1,0 +1,9 @@
+http://viaf.org/viaf/10001407	NKC|jo20010086910
+http://viaf.org/viaf/10001407	WKP|Q46479622
+http://viaf.org/viaf/100144403	WKP|Q17280389
+http://viaf.org/viaf/100177876	NKC|ola2002153976
+http://viaf.org/viaf/100177876	WKP|Q164470
+http://viaf.org/viaf/100208187	WKP|Q1236889
+http://viaf.org/viaf/100208187	NKC|mzk2008458942
+http://viaf.org/viaf/100217141	WKP|Q1782328
+http://viaf.org/viaf/100232568	NKC|xx0199531
