@@ -26,6 +26,9 @@ class AutRecord(Record):
                             name = self['150']['a']
                         except TypeError:
                             name = None
+        last_character = str(name)[-1]
+        if (str(last_character) == ','):
+            name = name[:-1]
         return name
 
     def aut(self):

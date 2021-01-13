@@ -565,7 +565,25 @@ class importWikibaseAutority:
 
         cursor.close()
 
+    def delete_aun(self):
+        site = pywikibot.Site('autority', 'autority')
+        repo = site.data_repository()
 
+        fh = open('aun_nkcr.csv')
+        for line in fh:
+            # in python 2
+            # print line
+            # in python 3
+            p = pywikibot.Page(source=repo, ns=120, title=line.strip())
+            # print(p.text)
+            if site.user() is None:
+                site.login()
+            if (p.text.strip() == ''):
+                continue
+            p.delete(reason='deleted aun authority', prompt=False, quit=True)
+            print(line.strip())
+        fh.close()
 
 c = importWikibaseAutority()
-c.importAutority()
+# c.importAutority()
+c.delete_aun()

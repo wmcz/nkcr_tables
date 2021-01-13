@@ -82,7 +82,9 @@ def get_week_num_to_download(force_week = None):
         return force_week
     actual_week_num_obj = datetime.datetime.now()
     actual_week_num = actual_week_num_obj.isocalendar()[1]
-    week_num_to_download = actual_week_num - 2
+    week_num_to_download = actual_week_num - 1
+    if (week_num_to_download == 0):
+        week_num_to_download = 51
     return week_num_to_download
 
 def download_actual_file_from_nkcr(force = None):
@@ -101,9 +103,9 @@ def download_actual_file_from_nkcr(force = None):
             #     print(week_num)
             # except AttributeError as e:
             #     week_num = 0
-
+            week_num_to_download = str(week_num_to_download).zfill(2)
             # print(name)
-            file_name_to_download = 'wnew_m_' + str(week_num_to_download) + '.xml'
+            file_name_to_download = 'wnew_m_' + week_num_to_download + '.xml'
             # print(file_name_to_download)
             # print(name)
             if (name == file_name_to_download):
@@ -136,18 +138,24 @@ def resolve_birth_from_note(record):
     return birth_from_note
 
 def create_search_link(name):
-    link = "[https://www.wikidata.org/w/index.php?search=" + str(name).replace(' ', '+') + " Prohledat Wikidata]"
+    link = "<span style='border: 1px solid black; padding: 5px; border-radius: 2px; background-color: #b9f5b3; background-image: none;'>[https://www.wikidata.org/w/index.php?search=" + str(name).replace(' ', '+').replace('"','+') + " 🔎&nbsp;WD]</span>"
+    return link
+
+def create_wd_link(qid):
+    link = ' ([https://www.wikidata.org/wiki/' + qid + ' ' + qid + '])'
     return link
 
 def create_nkcr_link(nkcr_aut):
-    link = '([https://aleph.nkp.cz/F/?func=find-c&local_base=aut&ccl_term=ica=' + nkcr_aut + ' ' + nkcr_aut + '])'
+    link = ' ([https://aleph.nkp.cz/F/?func=find-c&local_base=aut&ccl_term=ica=' + nkcr_aut + ' ' + nkcr_aut + '])'
     return link
 
-def create_quickstatements_link(record_in_nkcr):
+def create_quickstatements_link(record_in_nkcr, force_qid = None):
     link = quickstatements()
     link.reset()
     if (record_in_nkcr.wikidata_from_nkcr is not None):
         which_wd_item = record_in_nkcr.wikidata_from_nkcr
+    elif (force_qid is not None):
+        which_wd_item = force_qid
     else:
         which_wd_item = link.LAST_DEFINE
         link.create()
@@ -169,7 +177,9 @@ def create_quickstatements_link(record_in_nkcr):
     link.set_date(record_in_nkcr.aut, link.DEATH, record_in_nkcr.death_to_quickstatements)
 
     if (record_in_nkcr.wikidata_from_nkcr is not None):
-        quickstatement_link = "[" + link.get_link() + " Přidat přes QuickStatements]"
+        quickstatement_link = "<span style='border: 1px solid black; padding: 5px; border-radius: 2px; background-color: #b9f5b3; background-image: none;'>[" + link.get_link() + " ➕&nbsp;Doplnit&nbsp;do&nbsp;" + record_in_nkcr.wikidata_from_nkcr + "]</span>"
+    elif (force_qid is not None):
+        quickstatement_link = "<span style='border: 1px solid black; padding: 5px; border-radius: 2px; background-color: #b9f5b3; background-image: none;'>[" + link.get_link() + " ➕&nbsp;Doplnit&nbsp;do&nbsp;" + force_qid + "]</span>"
     else:
-        quickstatement_link = "[" + link.get_link() + " Vytvořit přes QuickStatements]"
+        quickstatement_link = "<span style='border: 1px solid black; padding: 5px; border-radius: 2px; background-color: #b9f5b3; background-image: none;'>[" + link.get_link() + " ➕&nbsp;Vytvořit]</span>"
     return quickstatement_link

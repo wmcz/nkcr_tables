@@ -81,7 +81,7 @@ class quickstatements:
             dt_string = value.strftime("+%Y-%m-%dT%H:%M:%SZ/"+precision)
 
         if (dt_string != ''):
-            cmd = self.which_item + self.SEPARATOR + property + self.SEPARATOR + dt_string + self.SEPARATOR + "S248" + self.SEPARATOR + "Q13550863" + self.SEPARATOR + "S691" + self.SEPARATOR + nkcr_aut + self.SEPARATOR + "S813" + self.SEPARATOR + self.ENCLOSURE + now_dt_string + self.ENCLOSURE + self.END_LINE
+            cmd = self.which_item + self.SEPARATOR + property + self.SEPARATOR + dt_string + self.SEPARATOR + "S248" + self.SEPARATOR + "Q13550863" + self.SEPARATOR + "S691" + self.SEPARATOR + nkcr_aut + self.SEPARATOR + "S813" + self.SEPARATOR + now_dt_string + self.END_LINE
             self.add_command(cmd)
 
 
@@ -89,7 +89,7 @@ class quickstatements:
         # "+2017-10-04T00:00:00Z/11"
 
         now = datetime.now()
-        dt_string = now.strftime("+%Y-%m-%dT%H:%M:%SZ/11")
+        dt_string = now.strftime("+%Y-%m-%dT00:00:00Z/11")
         return dt_string
 
     def set_nkcr(self, nkcr_aut, name_in_nkcr):
@@ -102,6 +102,6 @@ class quickstatements:
             name_in_nkcr = ''
 
         dt_string = self.now_time()
-        cmd = self.which_item + self.SEPARATOR + "P691" + self.SEPARATOR + nkcr_aut + self.SEPARATOR + "P1810" + self.SEPARATOR + name_in_nkcr + self.SEPARATOR + "S248" + self.SEPARATOR + "Q13550863" + self.SEPARATOR + "S691" + self.SEPARATOR + nkcr_aut + self.SEPARATOR + "S813" + self.SEPARATOR + self.ENCLOSURE + dt_string + self.ENCLOSURE + self.END_LINE
+        cmd = self.which_item + self.SEPARATOR + "P691" + self.SEPARATOR + nkcr_aut + self.SEPARATOR + "P1810" + self.SEPARATOR + name_in_nkcr + self.SEPARATOR + "S248" + self.SEPARATOR + "Q13550863" + self.SEPARATOR + "S691" + self.SEPARATOR + nkcr_aut + self.SEPARATOR + "S813" + self.SEPARATOR + dt_string + self.END_LINE
         # cmd = which + self.SEPARATOR + "P691" + self.SEPARATOR + nkcr_aut + self.END_LINE
         self.add_command(cmd)

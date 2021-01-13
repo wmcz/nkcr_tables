@@ -1,0 +1,5 @@
+*.ctrl
+*.pyc
+/pywikibot.lwp
+/apicache-py3
+/__pycache__

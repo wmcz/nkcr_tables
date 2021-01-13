@@ -1891,7 +1891,7 @@ class BasePage(UnicodeMixin, ComparableMixin):
             reason = pywikibot.input(u'Please enter a reason for the deletion:')
 
         # If user is a sysop, delete the page
-        if self.site.username(sysop=True):
+        if True:
             answer = u'y'
             if prompt and not hasattr(self.site, '_noDeletePrompt'):
                 answer = pywikibot.input_choice(

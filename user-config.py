@@ -41,6 +41,6 @@ mylang = 'wikidata'
 # family , you can use '*'
 usernames['wikidata']['wikidata'] = u'frettiebot'
 usernames['autority']['autority'] = u'Frettie' #nn5n9gjafc73ruuj0ht8hmnktscedr7r
-
+sysopnames['autority']['autority'] = u'Frettie'
 usernames['commons']['commons'] = u'frettiebot'
 usernames['wikipedia']['cs'] = u'frettiebot'
