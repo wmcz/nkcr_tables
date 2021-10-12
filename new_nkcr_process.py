@@ -11,8 +11,8 @@ import re
 import datetime
 import MySQLdb
 import nkcrlib
-
-def insert_into_nkcr_db(record, count, mydata):
+# from pymarc import Record
+def insert_into_nkcr_db(record, count=0, mydata=[]):
     assert isinstance(record, AutRecord)
     # print(data)
     aut = record.aut()
@@ -145,7 +145,7 @@ count = 0
 
 
 # map_xml(insert_into_nkcr_db, 'aut.xml')
-# map_xml(insert_into_nkcr_db, 'vyreznew.xml')
+nkcrlib.map_xml(insert_into_nkcr_db, 'vyreznew_2_2_2021.xml')
 
 def reconcileByReconciler():
     from reconciler import reconcile

@@ -49,6 +49,8 @@ class quickstatements:
 
     def set_description(self, value, lang = 'cs'):
         try:
+            if (len(value) > 250):
+                value = value[ 0 : 250 ]
             value = self.ENCLOSURE + value + self.ENCLOSURE
         except TypeError as e:
             value = ''

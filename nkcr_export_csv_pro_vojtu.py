@@ -169,12 +169,12 @@ def table_line(record, count, mydata):
         'first_name': first_name,
         'last_name': last_name,
         # 'okres' : okres,
-        'popis': popis,
-        'narozen_046': narozen,
-        'zemrel_046': zemrel,
-        '100d': birth_death,
-        'birth_from_note' : birth_from_note,
-        'death_from_note' : death_from_note,
+        # 'popis': popis,
+        # 'narozen_046': narozen,
+        # 'zemrel_046': zemrel,
+        # '100d': birth_death,
+        # 'birth_from_note' : birth_from_note,
+        # 'death_from_note' : death_from_note,
         # 'birth_note_precision' : birth_note_precision,
         # 'death_note_precision' : death_note_precision,
         # 'birth_wd' : birth_wd,
@@ -182,7 +182,7 @@ def table_line(record, count, mydata):
         # 'type' : type,
         # 'new' : new,
         # 'updated' : updated,
-        # 'wikidata_from_nkcr': wikidata_from_nkcr,
+        'wikidata_from_nkcr': wikidata_from_nkcr,
         # 'isni': isni_field,
         # 'orcid': orcid_field,
         # 'wikipedia_670': wikipedia_670_link,
@@ -197,7 +197,8 @@ def table_line(record, count, mydata):
 
     # table.append(table_columns.values())
     # if (nkcrlib.write_allowed):
-    if (True):
+    # if (True):
+    if (len(wikidata_from_nkcr)):
 
         arr = []
         for i in table_columns.values():
@@ -217,18 +218,17 @@ file = 'aut.xml'
 if (file is not False):
     # f = open('export_csv_all_orcid.csv', 'w', newline='')
     # f = open('export_new_desc.csv', 'w', newline='')
-    f = open('export_all_desc.csv', 'w', newline='')
+    f = open('export_new_wd.csv', 'w', newline='')
     import csv
 
     # write_allowed = False
     writer = csv.writer(f, delimiter=";", quotechar='"', quoting=csv.QUOTE_ALL)
-    writer.writerow(['nkcr_id'] + ['name'] + ['first_name'] + ['last_name'] +
-                    ['desc'] + ['birth_nkcr_046'] + ['death_nkcr_046'] + ['birth_death_100d'] + ['birth_from_desc'] +
-                    ['death_from_desc'])
-
     # writer.writerow(['nkcr_id'] + ['name'] + ['first_name'] + ['last_name'] +
-    #                 ['wd_024'] + ['orcid_024'] + ['isni_024'] + ['wikilink_670'] +
-    #                 ['wikilink_856'])
+    #                 ['desc'] + ['birth_nkcr_046'] + ['death_nkcr_046'] + ['birth_death_100d'] + ['birth_from_desc'] +
+    #                 ['death_from_desc'])
+
+    writer.writerow(['nkcr_id'] + ['name'] + ['first_name'] + ['last_name'] +
+                    ['wd_024'])
 
     #
     loadToTable(file_name=file)

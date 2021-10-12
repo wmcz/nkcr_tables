@@ -7,7 +7,7 @@ class wikitable:
     header_columns = []
     lines = []
     template_text = '''
-    {{'{'}}| class="{{ class_name }}"
+{{'{'}}| class="{{ class_name }}"
 |+ {{ caption }}
 |-
 ! {% for column in header_columns %} {% if loop.index >= 1 %}!!{% endif %} {{ column }} {% endfor %}
@@ -33,3 +33,8 @@ class wikitable:
         template = Template(self.template_text)
         return template.render(caption=self.caption, class_name=self.class_name, header_columns=self.header_columns, lines=self.lines)
 
+    def __init__(self):
+        self.caption = ''
+        self.class_name = 'wikitable'
+        self.header_columns = []
+        self.lines = []

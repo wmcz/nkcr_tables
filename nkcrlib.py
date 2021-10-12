@@ -87,6 +87,16 @@ def get_week_num_to_download(force_week = None):
         week_num_to_download = 51
     return week_num_to_download
 
+def get_year_actual():
+
+    actual_week_num_obj = datetime.datetime.now()
+    actual_week_num = actual_week_num_obj.isocalendar()[1]
+    week_num_to_download = actual_week_num - 1
+    year = actual_week_num_obj.year
+    if (week_num_to_download == 0):
+        year = year-1
+    return year
+
 def download_actual_file_from_nkcr(force = None):
     import ftputil
     week_num_to_download = get_week_num_to_download(force)
@@ -110,8 +120,12 @@ def download_actual_file_from_nkcr(force = None):
             # print(name)
             if (name == file_name_to_download):
                 if ftp_host.path.isfile(name):
-                    ftp_host.download(name, name)  # remote, local
-                    return name
+                    info = ftp_host.stat(name)
+                    mtime = info.st_mtime
+                    dt_object = datetime.datetime.fromtimestamp(int(mtime))
+                    new_name = str(dt_object.year) + '-' + name
+                    ftp_host.download(name, new_name)  # remote, local
+                    return new_name
 
         return False
 
@@ -152,25 +166,28 @@ def create_nkcr_link(nkcr_aut):
 def create_quickstatements_link(record_in_nkcr, force_qid = None):
     link = quickstatements()
     link.reset()
+    create_new = False
     if (record_in_nkcr.wikidata_from_nkcr is not None):
         which_wd_item = record_in_nkcr.wikidata_from_nkcr
     elif (force_qid is not None):
         which_wd_item = force_qid
     else:
+        create_new = True
         which_wd_item = link.LAST_DEFINE
         link.create()
 
 
     link.set_record(record_in_nkcr)
     link.set_item_to_add(which_wd_item)
-    try:
-        link.set_label(record_in_nkcr.first_name + " " + record_in_nkcr.last_name)
-        link.set_label(record_in_nkcr.first_name + " " + record_in_nkcr.last_name, 'en')
-        link.set_label(record_in_nkcr.first_name + " " + record_in_nkcr.last_name, 'de')
-    except TypeError:
-        link.set_label(record_in_nkcr.name)
-        link.set_label(record_in_nkcr.name, 'en')
-        link.set_label(record_in_nkcr.name, 'de')
+    if create_new:
+        try:
+            link.set_label(record_in_nkcr.first_name + " " + record_in_nkcr.last_name)
+            link.set_label(record_in_nkcr.first_name + " " + record_in_nkcr.last_name, 'en')
+            link.set_label(record_in_nkcr.first_name + " " + record_in_nkcr.last_name, 'de')
+        except TypeError:
+            link.set_label(record_in_nkcr.name)
+            link.set_label(record_in_nkcr.name, 'en')
+            link.set_label(record_in_nkcr.name, 'de')
     link.set_description(record_in_nkcr.description)
     link.set_nkcr(record_in_nkcr.aut, record_in_nkcr.name)
     link.set_date(record_in_nkcr.aut, link.BIRTH, record_in_nkcr.birth_to_quickstatements)
