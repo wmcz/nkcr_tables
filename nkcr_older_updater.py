@@ -14,7 +14,8 @@ actual_week_num_obj = datetime.datetime.now()
 actual_year = actual_week_num_obj.year
 actual_week_num = nkcrlib.get_week_num_to_download()
 
-site = pywikibot.getSite('wikidata', 'wikidata')
+#site = pywikibot.getSite('wikidata', 'wikidata')
+site = pywikibot.Site('wikidata', 'wikidata')
 c = create_nkcr_table.create_table()
 
 ## get exist pages

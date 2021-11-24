@@ -136,7 +136,7 @@ class create_table:
                 page.save()
             else:
                 print('No save main page! It is ok!')
-        except pywikibot.exceptions.NoPage:
+        except pywikibot.exceptions.NoPageError:
             print('No page:' + 'Wikidata:WikiProject Czech Republic/New authorities')
             pass
 
@@ -163,7 +163,7 @@ class create_table:
                     page.get()
                     wk = {'week' : week, 'year' : year}
                     exist_weeks.append(wk)
-                except pywikibot.exceptions.NoPage:
+                except pywikibot.exceptions.NoPageError:
                     # print('No page: ' + 'Wikipedista:Frettie/nkcr_table/' + str(week))
                     pass
         return exist_weeks
@@ -174,7 +174,8 @@ class create_table:
             if (int(wk['year']) == actual_year and actual_week_num == int(wk['week'])):
                 continue
             if (int(wk['year']) == actual_year):
-                prepared.append(wk)
+                if (len(prepared) <= OLDER_UPDATER_PAGE_COUNT):
+                    prepared.append(wk)
 
         if (len(prepared) < OLDER_UPDATER_PAGE_COUNT):
             # get older
