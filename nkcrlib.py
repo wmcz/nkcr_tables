@@ -1,4 +1,4 @@
-import MySQLdb
+# import MySQLdb
 from autxmlhandler import AutXmlHandler
 from pymarc.marcxml import parse_xml
 import datetime

@@ -32,7 +32,7 @@ class create_table:
         assert isinstance(record, AutRecord)
         record_in_nkcr = nkcr_record(record)
         # print('table line ' + str(record_in_nkcr.aut))
-        if (count % 100 == 0):
+        if (count % 10 == 0):
             print('nkcr record counter: ' + str(count))
 
         if self.already_filled_in_wikidata(record_in_nkcr.aut):
@@ -50,6 +50,11 @@ class create_table:
                 wd_link = ""
         else:
             wd_link = ""
+
+        if (record_in_nkcr.wikiproject_from_nkcr != ''):
+            qid_from_wiki = self.get_qid_by_wiki(record_in_nkcr.wikilang_from_nkcr, record_in_nkcr.wikiarticle_from_nkcr)
+            if (record_in_nkcr.wikidata_from_nkcr is None and qid_from_wiki is not None):
+                record_in_nkcr.wikidata_from_nkcr = qid_from_wiki
 
         birth_to_table = ""
         if record_in_nkcr.birth_to_quickstatements is not None:
@@ -98,7 +103,7 @@ class create_table:
         nkcrlib.map_xml(self.table_line, file_name)
 
 
-    def save_page(self, week_num, table):
+    def save_page(self, week_num, table, quiet = False):
         site = pywikibot.Site('wikidata', 'wikidata')
         # site = pywikibot.getSite('wikidata', 'wikidata')
 
@@ -107,7 +112,7 @@ class create_table:
         try:
             page = pywikibot.Page(site, 'Wikidata:WikiProject Czech Republic/New authorities/' + self.year + '/' + str(week_num))
             page.text = table
-            page.save()
+            page.save(quiet=quiet)
             if (self.update_main_page == True):
                 exist_weeks = self.get_exist_pages(site)
 
@@ -133,9 +138,10 @@ class create_table:
 
                 page = pywikibot.Page(pywikibot.Site('wikidata', fam='wikidata'), 'Wikidata:WikiProject Czech Republic/New authorities')
                 page.text = text_main_page
-                page.save()
+                page.save(quiet=quiet)
             else:
-                print('No save main page! It is ok!')
+                pass
+                # print('No save main page! It is ok!')
         except pywikibot.exceptions.NoPageError:
             print('No page:' + 'Wikidata:WikiProject Czech Republic/New authorities')
             pass
@@ -191,9 +197,12 @@ class create_table:
             hub_link = "https://hub.toolforge.org/" + PROPERTY + ":" + str(nkcr_aut) + "?format=json"
             response = requests.get(hub_link)
             json_record = response.text
-            data_record = json.loads(json_record)
-            wd_record = data_record['origin']['qid']
-            return True
+            response.status_code
+            if response.status_code == 200:
+                data_record = json.loads(json_record)
+                wd_record = data_record['origin']['qid']
+                return True
+            return False
         except (KeyError, TypeError):
             return False
 
@@ -204,11 +213,33 @@ class create_table:
         try:
             hub_link = "https://hub.toolforge.org/" + property + ":" + str(viaf_id) + "?site=wikidata&format=json"
             response = requests.get(hub_link)
-            json_record = response.text
-            data_record = json.loads(json_record)
-            wd_record = data_record['origin']['qid']
-            print('qid by viaf found: ' + str(viaf_id))
-            return wd_record
+            if response.status_code == 200:
+                json_record = response.text
+                data_record = json.loads(json_record)
+                wd_record = data_record['origin']['qid']
+                print('qid by viaf found: ' + str(viaf_id))
+                return wd_record
+            else:
+                return None
+        except (KeyError, TypeError, json.decoder.JSONDecodeError):
+            return None
+
+    def get_qid_by_wiki(self, project, article):
+        property = 'viaf'
+
+        try:
+            #/enwiki:DIY?site=wikidata
+            query = project + 'wiki:' + article + '?site=wikidata'
+            hub_link = "https://hub.toolforge.org/" + query + "&format=json"
+            response = requests.get(hub_link)
+            if response.status_code == 200:
+                json_record = response.text
+                data_record = json.loads(json_record)
+                wd_record = data_record['destination']['preferedSitelink']['title']
+                # print('qid by wikilink found: ' + 'found')
+                return wd_record
+            else:
+                return None
         except (KeyError, TypeError, json.decoder.JSONDecodeError):
             return None
 
@@ -221,14 +252,14 @@ class create_table:
             viaf_url = response.next.url
             splitted = viaf_url.split('/')
             viaf_id = splitted[-1]
-            print('viaf found: ' + str(nkcr_aut))
+            # print('viaf found: ' + str(nkcr_aut))
             return self.get_qid_by_viaf_id(viaf_id)
         except (KeyError, TypeError, AttributeError):
             return None
 
-    def run(self, week_num_force = None, year_num_force = None):
+    def run(self, week_num_force = None, year_num_force = None, quiet = False):
         file = nkcrlib.download_actual_file_from_nkcr(week_num_force)
-        # file = "2020-wnew_m_47.xml"
+        # file = "2022-wnew_m_17.xml"
         if (file is not False):
 
             self.load_to_table(file_name=file)
@@ -267,13 +298,15 @@ class create_table:
                     # else:
                     #     print('filled_already: ' + str(l['name']))
                 else:
-                    print('aun or kon record deleted: ' + str(l['nkcr_aut']))
+                    pass
+                    # print('aun or kon record deleted: ' + str(l['nkcr_aut']))
 
             printed_table = wt.print_table()
-            self.save_page(week_num, printed_table)
+            self.save_page(week_num, printed_table, quiet)
 
     def __init__(self):
-        print('run create table!')
+        pass
+        # print('run create table!')
 
 # cr = create_table()
 # cr.run(WEEK_NUM_CONST)

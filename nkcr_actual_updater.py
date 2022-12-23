@@ -2,4 +2,4 @@
 import create_nkcr_table
 
 c = create_nkcr_table.create_table()
-c.run()
+c.run(quiet=True)

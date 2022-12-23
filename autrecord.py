@@ -9,6 +9,7 @@ class AutRecord(Record):
         name = None
         try:
             name = self['100']['a']
+
         except TypeError:
             try:
                 prep = self['110']
@@ -18,6 +19,12 @@ class AutRecord(Record):
             except TypeError:
                 try:
                     name = self['110']['a']
+                    try:
+                        second_name = self['110']['b']
+                    except TypeError:
+                        second_name = None
+                    if second_name is not None:
+                        name = name + ' ' + second_name
                 except TypeError:
                     try:
                         name = self['111']['a']
@@ -25,7 +32,10 @@ class AutRecord(Record):
                         try:
                             name = self['150']['a']
                         except TypeError:
-                            name = None
+                            try:
+                                name = self['151']['a']
+                            except TypeError:
+                                name = None
         last_character = str(name)[-1]
         if (str(last_character) == ','):
             name = name[:-1]
@@ -299,7 +309,17 @@ class AutRecord(Record):
             splits = name.replace(',','').split(' ')
             length = len(splits)
             ret = splits[len(splits)-1]
-            return ret
+
+            import re
+            regex = r"(.*),\W+([\w‘ \.]*)(,*)"
+            matches = re.search(regex, name, re.IGNORECASE)
+            try:
+                groups = matches.groups()
+                name = groups[1]
+            except AttributeError as e:
+                name = ret
+            except ValueError as e:
+                name = ret
         except TypeError:
             name = None
 
@@ -312,10 +332,20 @@ class AutRecord(Record):
         try:
             name = self['100']['a']
             assert isinstance(name, str)
-            splits = name.replace(',','').split(' ')
+            splits = name.replace(',', '').split(' ')
             length = len(splits)
             ret = splits[0]
-            return ret
+
+            import re
+            regex = r"(.*),\W+([\w‘ \.]*)(,*)"
+            matches = re.search(regex, name, re.IGNORECASE)
+            try:
+                groups = matches.groups()
+                name = groups[0]
+            except AttributeError as e:
+                name = ret
+            except ValueError as e:
+                name = ret
         except TypeError:
             name = None
 
