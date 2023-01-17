@@ -389,3 +389,20 @@ class AutRecord(Record):
                 name = None
 
         return name
+
+    def gender(self):
+        """
+                        Returns the title of the record (245 $a an $b).
+                        """
+        try:
+            gender = self['375']['a']
+            if (gender == 'muž'):
+                return "man"
+            elif (gender == 'žena'):
+                return "woman"
+            else:
+                return None
+        except TypeError:
+            gender = None
+
+        return gender

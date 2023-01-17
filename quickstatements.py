@@ -107,3 +107,49 @@ class quickstatements:
         cmd = self.which_item + self.SEPARATOR + "P691" + self.SEPARATOR + nkcr_aut + self.SEPARATOR + "P1810" + self.SEPARATOR + name_in_nkcr + self.SEPARATOR + "S248" + self.SEPARATOR + "Q13550863" + self.SEPARATOR + "S691" + self.SEPARATOR + nkcr_aut + self.SEPARATOR + "S813" + self.SEPARATOR + dt_string + self.END_LINE
         # cmd = which + self.SEPARATOR + "P691" + self.SEPARATOR + nkcr_aut + self.END_LINE
         self.add_command(cmd)
+
+    def set_gender(self, nkcr_aut, name_in_nkcr, gender):
+        #Q95168516|P691|"nk123456"|P1810|"Matla Patla"|S248|Q13550863|S691|"nk123456"|S813|+2017-10-04T00:00:00Z/11
+
+        nkcr_aut = self.ENCLOSURE + nkcr_aut + self.ENCLOSURE
+        try:
+            name_in_nkcr = self.ENCLOSURE + name_in_nkcr + self.ENCLOSURE
+        except TypeError:
+            name_in_nkcr = ''
+
+        try:
+            if (gender == 'man'):
+                gender_qid = "Q6581097"
+            elif gender == 'woman':
+                gender_qid = "Q6581072"
+            else:
+                return None
+        except TypeError:
+            gender_string = ''
+
+        dt_string = self.now_time()
+        cmd = self.which_item + self.SEPARATOR + "P21" + self.SEPARATOR + gender_qid + self.SEPARATOR + "S248" + self.SEPARATOR + "Q13550863" + self.SEPARATOR + "S691" + self.SEPARATOR + nkcr_aut + self.SEPARATOR + "S813" + self.SEPARATOR + dt_string + self.END_LINE
+        # cmd = which + self.SEPARATOR + "P691" + self.SEPARATOR + nkcr_aut + self.END_LINE
+        self.add_command(cmd)
+
+    def set_human(self, nkcr_aut, name_in_nkcr, human):
+        # Q95168516|P691|"nk123456"|P1810|"Matla Patla"|S248|Q13550863|S691|"nk123456"|S813|+2017-10-04T00:00:00Z/11
+
+        nkcr_aut = self.ENCLOSURE + nkcr_aut + self.ENCLOSURE
+        try:
+            name_in_nkcr = self.ENCLOSURE + name_in_nkcr + self.ENCLOSURE
+        except TypeError:
+            name_in_nkcr = ''
+
+        try:
+            if (human == True):
+                human_qid = 'Q5'
+            else:
+                return None
+        except TypeError:
+            gender_string = ''
+
+        dt_string = self.now_time()
+        cmd = self.which_item + self.SEPARATOR + "P31" + self.SEPARATOR + human_qid + self.SEPARATOR + "S248" + self.SEPARATOR + "Q13550863" + self.SEPARATOR + "S691" + self.SEPARATOR + nkcr_aut + self.SEPARATOR + "S813" + self.SEPARATOR + dt_string + self.END_LINE
+        # cmd = which + self.SEPARATOR + "P691" + self.SEPARATOR + nkcr_aut + self.END_LINE
+        self.add_command(cmd)

@@ -188,10 +188,15 @@ def create_quickstatements_link(record_in_nkcr, force_qid = None):
             link.set_label(record_in_nkcr.name)
             link.set_label(record_in_nkcr.name, 'en')
             link.set_label(record_in_nkcr.name, 'de')
+        if (record_in_nkcr.human):
+            link.set_gender(record_in_nkcr.aut, record_in_nkcr.name, record_in_nkcr.gender)
+            link.set_human(record_in_nkcr.aut, record_in_nkcr.name, record_in_nkcr.human)
     link.set_description(record_in_nkcr.description)
     link.set_nkcr(record_in_nkcr.aut, record_in_nkcr.name)
     link.set_date(record_in_nkcr.aut, link.BIRTH, record_in_nkcr.birth_to_quickstatements)
     link.set_date(record_in_nkcr.aut, link.DEATH, record_in_nkcr.death_to_quickstatements)
+
+    get_link = link.get_link()
 
     if (record_in_nkcr.wikidata_from_nkcr is not None):
         quickstatement_link = "<span style='border: 1px solid black; padding: 5px; border-radius: 2px; background-color: #b9f5b3; background-image: none;'>[" + link.get_link() + " ➕&nbsp;Doplnit&nbsp;do&nbsp;" + record_in_nkcr.wikidata_from_nkcr + "]</span>"

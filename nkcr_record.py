@@ -33,6 +33,9 @@ class nkcr_record:
     county = ''
     city = ''
 
+    gender = ""
+    human = False
+
     wikidata_from_nkcr = ''
     wikiproject_from_nkcr = ''
     wikilang_from_nkcr = ''
@@ -62,6 +65,9 @@ class nkcr_record:
         self.status = record.status()
         self.county = record.okres()
         self.city = record.mesto()
+        self.gender = record.gender()
+        if (self.gender is not None):
+            self.human = True
 
         self.get_updated_time()
         self.resolve_wikidata_from_nkcr()
