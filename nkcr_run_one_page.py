@@ -20,6 +20,6 @@ site = pywikibot.Site('wikidata', 'wikidata')
 c = create_nkcr_table.create_table()
 c.update_main_page = False
 c.table = []
-c.run(1,2023)
+c.run(4, 2023, False, True)
 
 # create_nkcr_table.create_table()

@@ -131,8 +131,9 @@ class create_table:
 """ + actual_link + """
             
 == Starší ==
+{{Div col|6}}
 """ + older_weeks_list + """
-            
+{{Div col end}}
             
 """
 
@@ -257,8 +258,13 @@ class create_table:
         except (KeyError, TypeError, AttributeError):
             return None
 
-    def run(self, week_num_force = None, year_num_force = None, quiet = False):
-        file = nkcrlib.download_actual_file_from_nkcr(week_num_force)
+    def run(self, week_num_force = None, year_num_force = None, quiet = False, from_exist_file = None):
+
+        if (from_exist_file is not None):
+            week_num_force = str(week_num_force).zfill(2)
+            file = str(year_num_force) + '-wnew_m_' + week_num_force + '.xml'
+        else:
+            file = nkcrlib.download_actual_file_from_nkcr(week_num_force)
         # file = "2022-wnew_m_17.xml"
         if (file is not False):
 

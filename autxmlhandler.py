@@ -36,12 +36,12 @@ class AutXmlHandler(XmlHandler):
                 print('milion')
             self._record = AutRecord()
         elif element == 'controlfield':
-            tag = attrs.getValue((None, u'tag'))
+            tag = attrs.getValue((None, 'tag'))
             self._field = Field(tag)
         elif element == 'datafield':
-            tag = attrs.getValue((None, u'tag'))
-            ind1 = attrs.get((None, u'ind1'), u' ')
-            ind2 = attrs.get((None, u'ind2'), u' ')
+            tag = attrs.getValue((None, 'tag'))
+            ind1 = attrs.get((None, 'ind1'), ' ')
+            ind2 = attrs.get((None, 'ind2'), ' ')
             self._field = Field(tag, [ind1, ind2])
         elif element == 'subfield':
             self._subfield_code = attrs[(None, 'code')]
@@ -76,9 +76,8 @@ class AutXmlHandler(XmlHandler):
         elif element == 'datafield':
             self._record.add_field(self._field)
             self._field = None
-        elif element == 'subfield':
-            self._field.subfields.append(self._subfield_code)
-            self._field.subfields.append(text)
+        elif element == "subfield":
+            self._field.add_subfield(self._subfield_code, text)
             self._subfield_code = None
 
         self._text = []

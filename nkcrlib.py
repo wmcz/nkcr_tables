@@ -191,6 +191,10 @@ def create_quickstatements_link(record_in_nkcr, force_qid = None):
         if (record_in_nkcr.human):
             link.set_gender(record_in_nkcr.aut, record_in_nkcr.name, record_in_nkcr.gender)
             link.set_human(record_in_nkcr.aut, record_in_nkcr.name, record_in_nkcr.human)
+        else:
+            link.set_label(record_in_nkcr.geographicNameWithoutBrackets)
+            link.set_label(record_in_nkcr.geographicNameWithoutBrackets, 'en')
+            link.set_label(record_in_nkcr.geographicNameWithoutBrackets, 'de')
     link.set_description(record_in_nkcr.description)
     link.set_nkcr(record_in_nkcr.aut, record_in_nkcr.name)
     link.set_date(record_in_nkcr.aut, link.BIRTH, record_in_nkcr.birth_to_quickstatements)

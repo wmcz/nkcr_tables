@@ -76,11 +76,17 @@ class quickstatements:
         dt_string = ''
         if (len(str(value)) == 4):
             precision = '9'
-            dt = datetime(int(value), 1, 1)
-            dt_string = dt.strftime("+%Y-%m-%dT%H:%M:%SZ/"+precision)
+            try:
+                dt = datetime(int(value), 1, 1)
+                dt_string = dt.strftime("+%Y-%m-%dT%H:%M:%SZ/"+precision)
+            except ValueError as e:
+                dt_string = ''
         elif (type(value) is datetime):
-            precision = '11'
-            dt_string = value.strftime("+%Y-%m-%dT%H:%M:%SZ/"+precision)
+            try:
+                precision = '11'
+                dt_string = value.strftime("+%Y-%m-%dT%H:%M:%SZ/" + precision)
+            except ValueError as e:
+                dt_string = ''
 
         if (dt_string != ''):
             cmd = self.which_item + self.SEPARATOR + property + self.SEPARATOR + dt_string + self.SEPARATOR + "S248" + self.SEPARATOR + "Q13550863" + self.SEPARATOR + "S691" + self.SEPARATOR + nkcr_aut + self.SEPARATOR + "S813" + self.SEPARATOR + now_dt_string + self.END_LINE

@@ -10,31 +10,31 @@ class AutRecord(Record):
         try:
             name = self['100']['a']
 
-        except TypeError:
+        except KeyError:
             try:
                 prep = self['110']
                 name = prep['t']
                 if (name is None):
-                    raise(TypeError('err'))
-            except TypeError:
+                    raise(KeyError('err'))
+            except KeyError:
                 try:
                     name = self['110']['a']
                     try:
                         second_name = self['110']['b']
-                    except TypeError:
+                    except KeyError:
                         second_name = None
                     if second_name is not None:
                         name = name + ' ' + second_name
-                except TypeError:
+                except KeyError:
                     try:
                         name = self['111']['a']
-                    except TypeError:
+                    except KeyError:
                         try:
                             name = self['150']['a']
-                        except TypeError:
+                        except KeyError:
                             try:
                                 name = self['151']['a']
-                            except TypeError:
+                            except KeyError:
                                 name = None
         last_character = str(name)[-1]
         if (str(last_character) == ','):
@@ -79,6 +79,13 @@ class AutRecord(Record):
                     name = str(name)
             except TypeError:
                 name = None
+        except KeyError:
+            try:
+                name = self['046']['f']
+                if name is not None:
+                    name = str(name)
+            except KeyError:
+                name = None
 
         return name
 
@@ -95,6 +102,13 @@ class AutRecord(Record):
                     name = str(name)
             except TypeError:
                 name = None
+        except KeyError:
+            try:
+                name = self['046']['g']
+                if name is not None:
+                    name = str(name)
+            except KeyError:
+                name = None
 
         return name
 
@@ -104,7 +118,7 @@ class AutRecord(Record):
                 """
         try:
             name = self['678']['a']
-        except TypeError:
+        except KeyError:
             name = None
 
         return name
@@ -132,6 +146,8 @@ class AutRecord(Record):
                     if (str(typ) == type_of_link):
                         name_to_return = name
         except TypeError:
+            name = None
+        except KeyError:
             name = None
 
         return name_to_return
@@ -178,6 +194,8 @@ class AutRecord(Record):
                     except ValueError as e:
                         link = None
         except TypeError:
+            link = None
+        except KeyError:
             link = None
 
         return link
@@ -232,6 +250,8 @@ class AutRecord(Record):
                         link = None
         except TypeError:
             link = None
+        except KeyError:
+            link = None
 
         return link
 
@@ -265,6 +285,8 @@ class AutRecord(Record):
         except TypeError as e:
             # print(e)
             bdate = None
+        except KeyError:
+            bdate = None
 
         return bdate
 
@@ -296,6 +318,8 @@ class AutRecord(Record):
                 bdate = None
         except TypeError:
             bdate = None
+        except KeyError:
+            bdate = None
 
         return bdate
 
@@ -321,6 +345,8 @@ class AutRecord(Record):
             except ValueError as e:
                 name = ret
         except TypeError:
+            name = None
+        except KeyError:
             name = None
 
         return name
@@ -348,6 +374,8 @@ class AutRecord(Record):
                 name = ret
         except TypeError:
             name = None
+        except KeyError:
+            name = None
 
         return name
 
@@ -358,6 +386,8 @@ class AutRecord(Record):
         try:
             name = self['950']['a']
         except TypeError:
+            name = None
+        except KeyError:
             name = None
 
         return name
@@ -373,6 +403,15 @@ class AutRecord(Record):
                 name = self['151']['a']
             except TypeError:
                 name = None
+            except KeyError:
+                name = None
+        except KeyError:
+            try:
+                name = self['151']['a']
+            except TypeError:
+                name = None
+            except KeyError:
+                name = None
 
         return name
 
@@ -386,6 +425,15 @@ class AutRecord(Record):
             try:
                 name = self['151']['a']
             except TypeError:
+                name = None
+            except KeyError:
+                name = None
+        except KeyError:
+            try:
+                name = self['151']['a']
+            except TypeError:
+                name = None
+            except KeyError:
                 name = None
 
         return name
@@ -404,5 +452,18 @@ class AutRecord(Record):
                 return None
         except TypeError:
             gender = None
+        except KeyError:
+            gender = None
 
         return gender
+
+    def geographicNameWithoutBrackets(self):
+        name = self.name()
+        try:
+            return re.sub("[\(\[].*?[\)\]]", "", name).replace('Czechia', '')
+        except TypeError as e:
+            return self.name()
+        except KeyError:
+            return self.name()
+        except TypeError as e:
+            return self.name()
