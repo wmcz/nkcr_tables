@@ -16,13 +16,13 @@ site = pywikibot.Site('wikidata', 'wikidata')
 c = create_nkcr_table.create_table()
 
 ## get exist pages
-years = list(range(2020,2024))
+years = list(range(2021,2024))
 weeks = list(range(0,52))
 
 for year in years:
     for week in weeks:
-        week = str(week).zfill(2)
-        file = str(year) + '-wnew_m_' + week + '.xml'
+        week_to_file = str(week).zfill(2)
+        file = "/home/frettie/" + str(year) + '-wnew_m_' + week_to_file + '.xml'
         print(file)
         if os.path.isfile(file):
             print('file: ' + file)

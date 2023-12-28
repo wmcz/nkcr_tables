@@ -1,4 +1,5 @@
 import json
+import os
 # import sys
 # from typing import List, Any
 from typing import List, Any
@@ -30,6 +31,9 @@ class create_table:
 
     def table_line(self, record, count, mydata):
         assert isinstance(record, AutRecord)
+        aut = record.aut()
+        # if (aut == 'js20231197909'):
+        #     print('ano')
         record_in_nkcr = nkcr_record(record)
         # print('table line ' + str(record_in_nkcr.aut))
         if (count % 10 == 0):
@@ -261,8 +265,10 @@ class create_table:
     def run(self, week_num_force = None, year_num_force = None, quiet = False, from_exist_file = None):
 
         if (from_exist_file is not None):
-            week_num_force = str(week_num_force).zfill(2)
-            file = str(year_num_force) + '-wnew_m_' + week_num_force + '.xml'
+            week_num_force_to_file_name = str(week_num_force).zfill(2)
+            file = "/home/frettie/" + str(year_num_force) + '-wnew_m_' + week_num_force_to_file_name + '.xml'
+            if (os.getcwd() == '/Users/jirisedlacek/htdocs/vkol'):
+                file = "/Users/jirisedlacek/htdocs/vkol/" + str(year_num_force) + '-wnew_m_' + week_num_force_to_file_name + '.xml'
         else:
             file = nkcrlib.download_actual_file_from_nkcr(week_num_force)
         # file = "2022-wnew_m_17.xml"

@@ -40,6 +40,7 @@ mylang = 'wikidata'
 # have a bot account. If you have a unique username for all languages of a
 # family , you can use '*'
 usernames['wikidata']['wikidata'] = u'frettiebot'
+# usernames['wikidata']['wikidata'] = u'Frettie'
 usernames['autority']['autority'] = u'Frettie' #nn5n9gjafc73ruuj0ht8hmnktscedr7r
 # sysopnames['autority']['autority'] = u'Frettie'
 usernames['commons']['commons'] = u'frettiebot'

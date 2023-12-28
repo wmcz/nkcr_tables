@@ -189,6 +189,7 @@ class AutRecord(Record):
                             'link' : name
                         }
                         link = ret_dict
+                        return link
                     except AttributeError as e:
                         link = None
                     except ValueError as e:
@@ -218,7 +219,10 @@ class AutRecord(Record):
 
                 for line in ex:
                     # print(line)
-                    name = line['u']
+                    try:
+                        name = line['u']
+                    except KeyError as e:
+                        name = None
                     if (name is None):
                         name = ''
 
@@ -227,7 +231,7 @@ class AutRecord(Record):
                     if (type_of_source == 'wikidata'):
                         regex = r"(http|https):\/\/([a-z]+)\.(wikidata)\.org\/wiki\/(.*)"
                     else:
-                        regex = r"(http|https):\/\/([a-z]+)\.(wikipedia)\.org\/wiki\/(.*)"
+                        regex = r"(http|https):\/\/([a-z]+)\.(wikipedia|wikisource)\.org\/wiki\/(.*)"
 
                     matches = re.search(regex, name, re.IGNORECASE)
                     link = None
@@ -247,6 +251,8 @@ class AutRecord(Record):
                     except AttributeError as e:
                         link = None
                     except ValueError as e:
+                        link = None
+                    except KeyError as e:
                         link = None
         except TypeError:
             link = None

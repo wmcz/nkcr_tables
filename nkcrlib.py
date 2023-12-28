@@ -152,7 +152,7 @@ def resolve_birth_from_note(record):
     return birth_from_note
 
 def create_search_link(name):
-    link = "<span style='border: 1px solid black; padding: 5px; border-radius: 2px; background-color: #b9f5b3; background-image: none;'>[https://www.wikidata.org/w/index.php?search=" + str(name).replace(' ', '+').replace('"','+') + " 🔎&nbsp;WD]</span>"
+    link = "<span style='border: 1px solid black; padding: 5px; border-radius: 2px; background-color: #b9f5b3; background-image: none;'>[https://www.wikidata.org/w/index.php?search=" + str(name).replace(' ', '+').replace('"','+').replace('+,Czechia', '') + " 🔎&nbsp;WD]</span>"
     return link
 
 def create_wd_link(qid):
