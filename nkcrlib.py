@@ -84,7 +84,7 @@ def get_week_num_to_download(force_week = None):
     actual_week_num = actual_week_num_obj.isocalendar()[1]
     week_num_to_download = actual_week_num - 1
     if (week_num_to_download == 0):
-        week_num_to_download = 51
+        week_num_to_download = 52
     return week_num_to_download
 
 def get_year_actual():
