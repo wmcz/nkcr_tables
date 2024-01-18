@@ -16,7 +16,7 @@ site = pywikibot.Site('wikidata', 'wikidata')
 c = create_nkcr_table.create_table()
 
 ## get exist pages
-years = list(range(2021,2024))
+years = list(range(2021,2025))
 weeks = list(range(0,52))
 
 for year in years:
