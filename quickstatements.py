@@ -60,6 +60,10 @@ class quickstatements:
         link = ''.join(self.quickstatements_command)
         return self.QUICKSTATEMENTS_LINK + urllib.parse.quote(link, safe="")
 
+    def get_line(self):
+        line = ''.join(self.quickstatements_command)
+        return line
+
     def set_date(self, nkcr_aut, birth_or_death, value):
         if (birth_or_death == self.BIRTH):
             property = 'P569'

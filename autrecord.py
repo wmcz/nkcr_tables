@@ -35,7 +35,13 @@ class AutRecord(Record):
                             try:
                                 name = self['151']['a']
                             except KeyError:
-                                name = None
+                                try:
+                                    name = self['130']['a']
+                                except KeyError:
+                                    try:
+                                        name = self['240']['a']
+                                    except KeyError:
+                                        name = None
         last_character = str(name)[-1]
         if (str(last_character) == ','):
             name = name[:-1]

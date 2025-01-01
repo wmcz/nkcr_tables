@@ -163,7 +163,7 @@ def create_nkcr_link(nkcr_aut):
     link = ' ([https://aleph.nkp.cz/F/?func=find-c&local_base=aut&ccl_term=ica=' + nkcr_aut + ' ' + nkcr_aut + '])'
     return link
 
-def create_quickstatements_link(record_in_nkcr, force_qid = None):
+def create_quickstatements_link(record_in_nkcr, force_qid = None, quickstatement_line_only = False):
     link = quickstatements()
     link.reset()
     create_new = False
@@ -186,22 +186,27 @@ def create_quickstatements_link(record_in_nkcr, force_qid = None):
             link.set_label(record_in_nkcr.first_name + " " + record_in_nkcr.last_name, 'de')
         except TypeError:
             link.set_label(record_in_nkcr.name)
-            link.set_label(record_in_nkcr.name, 'en')
-            link.set_label(record_in_nkcr.name, 'de')
+            # link.set_label(record_in_nkcr.name, 'en')
+            # link.set_label(record_in_nkcr.name, 'de')
         if (record_in_nkcr.human):
             link.set_gender(record_in_nkcr.aut, record_in_nkcr.name, record_in_nkcr.gender)
             link.set_human(record_in_nkcr.aut, record_in_nkcr.name, record_in_nkcr.human)
+            link.set_description(record_in_nkcr.description)
+        elif record_in_nkcr.aut.startswith("ph"):
+            link.set_label(record_in_nkcr.name)
+            link.set_description(record_in_nkcr.description)
         else:
             link.set_label(record_in_nkcr.geographicNameWithoutBrackets)
             link.set_label(record_in_nkcr.geographicNameWithoutBrackets, 'en')
             link.set_label(record_in_nkcr.geographicNameWithoutBrackets, 'de')
-    link.set_description(record_in_nkcr.description)
+
     link.set_nkcr(record_in_nkcr.aut, record_in_nkcr.name)
     link.set_date(record_in_nkcr.aut, link.BIRTH, record_in_nkcr.birth_to_quickstatements)
     link.set_date(record_in_nkcr.aut, link.DEATH, record_in_nkcr.death_to_quickstatements)
 
     get_link = link.get_link()
-
+    if (quickstatement_line_only):
+        return link.get_line()
     if (record_in_nkcr.wikidata_from_nkcr is not None):
         quickstatement_link = "<span style='border: 1px solid black; padding: 5px; border-radius: 2px; background-color: #b9f5b3; background-image: none;'>[" + link.get_link() + " ➕&nbsp;Doplnit&nbsp;do&nbsp;" + record_in_nkcr.wikidata_from_nkcr + "]</span>"
     elif (force_qid is not None):

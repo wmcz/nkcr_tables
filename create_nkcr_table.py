@@ -24,6 +24,9 @@ OLDER_UPDATER_PAGE_COUNT = 10
 
 class create_table:
     table = []
+
+    quick_lines = []
+
     year: str = ''
     update_main_page: bool = True
 
@@ -99,7 +102,8 @@ class create_table:
         }
 
         self.table.append(table_columns)
-
+        if record_in_nkcr.human:
+            self.quick_lines.append(nkcrlib.create_quickstatements_link(record_in_nkcr, None, True))
         return False
 
 
@@ -162,7 +166,7 @@ class create_table:
                  '20', '21', '22', '23', '24', '25', '26', '27', '28', '29',
                  '30', '31', '32', '33', '34', '35', '36', '37', '38', '39',
                  '40', '41', '42', '43', '44', '45', '46', '47', '48', '49',
-                 '50', '51'
+                 '50', '51', '52'
                  ]
         weeks.reverse()
 
@@ -245,7 +249,7 @@ class create_table:
                 return wd_record
             else:
                 return None
-        except (KeyError, TypeError, json.decoder.JSONDecodeError):
+        except (KeyError, TypeError, json.decoder.JSONDecodeError, requests.exceptions.ConnectionError):
             return None
 
 
@@ -312,6 +316,9 @@ class create_table:
                 else:
                     pass
                     # print('aun or kon record deleted: ' + str(l['nkcr_aut']))
+
+            for lin in self.quick_lines:
+                print(lin)
 
             printed_table = wt.print_table()
             self.save_page(week_num, printed_table, quiet)
