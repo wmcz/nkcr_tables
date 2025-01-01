@@ -1,5 +1,8 @@
 *.ctrl
-*.pyc
 /pywikibot.lwp
 /apicache-py3
-/__pycache__
+/apicache
+/__pycache__/*
+*.xml
+*.lwp
+*.pyc
