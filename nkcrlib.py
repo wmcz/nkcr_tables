@@ -82,19 +82,26 @@ def get_week_num_to_download(force_week = None):
         return force_week
     actual_week_num_obj = datetime.datetime.now()
     actual_week_num = actual_week_num_obj.isocalendar()[1]
-    week_num_to_download = actual_week_num - 1
-    if (week_num_to_download == 0):
-        week_num_to_download = 52
+    year = actual_week_num_obj.year
+    if year == 2025:
+        week_num_to_download = actual_week_num - 2
+    else:
+        week_num_to_download = actual_week_num - 1
+        if (week_num_to_download == 0):
+            week_num_to_download = 52
     return week_num_to_download
 
 def get_year_actual():
 
     actual_week_num_obj = datetime.datetime.now()
     actual_week_num = actual_week_num_obj.isocalendar()[1]
-    week_num_to_download = actual_week_num - 1
     year = actual_week_num_obj.year
-    if (week_num_to_download == 0):
-        year = year-1
+    if year == 2025:
+        week_num_to_download = actual_week_num - 2
+    else:
+        week_num_to_download = actual_week_num - 1
+        if (week_num_to_download == 0):
+            year = year-1
     return year
 
 def download_actual_file_from_nkcr(force = None):
