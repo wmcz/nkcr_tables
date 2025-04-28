@@ -46,7 +46,8 @@ class create_table:
             return False
 
         if (not self.debug):
-            qid_from_viaf = self.find_on_viaf(str(record_in_nkcr.aut))
+            #qid_from_viaf = self.find_on_viaf(str(record_in_nkcr.aut))
+            qid_from_viaf = None
         else:
             qid_from_viaf = None
 
@@ -139,7 +140,7 @@ class create_table:
 """ + actual_link + """
             
 == Starší ==
-{{Div col|6}}
+{{Div col|colwidth=10em}}
 """ + older_weeks_list + """
 {{Div col end}}
             
