@@ -21,7 +21,7 @@ c = create_nkcr_table.create_table()
 c.update_main_page = False
 
 c.quick_lines = []
-c.run(15,2025)
+c.run(13,2025)
 c.table = []
 #
 # c.quick_lines = []

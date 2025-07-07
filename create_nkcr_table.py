@@ -1,8 +1,8 @@
 import json
 import os
 # import sys
-# from typing import List, Any
 from typing import List, Any
+from collections import defaultdict
 
 import requests
 
@@ -124,14 +124,19 @@ class create_table:
             page.save(quiet=quiet)
             if (self.update_main_page == True):
                 exist_weeks = self.get_exist_pages(site)
+                
+                weeks_by_year = defaultdict(list)
+                for week in exist_weeks:
+                    weeks_by_year[week['year']].append(week)
 
                 older_weeks_list = ''
-                for exist_week in exist_weeks:
-                    older_weeks_list = older_weeks_list + '\n'
-                    older_weeks_list = older_weeks_list + '* ' + '[[/' + str(exist_week['year']) + '/' +  str(exist_week['week']) + '|' + str(exist_week['year']) + '/' + str(exist_week['week']) + ']]'
+                for year, weeks in sorted(weeks_by_year.items(), reverse=True):
+                    older_weeks_list += f"\n'''{year}'''\n"
+                    older_weeks_list += "{{Div col|colwidth=10em}}\n"
+                    for exist_week in sorted(weeks, key=lambda x: int(x['week'])):
+                        older_weeks_list += f"* [[/{year}/{exist_week['week']}|{exist_week['week']}. týden]]\n"
+                    older_weeks_list += "{{Div col end}}\n"
 
-                # print(older_weeks_list)
-                # print(exist_weeks)
                 year = self.year
                 actual_link = "{{/" + str(year) + '/' + str(week_num) + "}}"
                 text_main_page = """Nové záznamy v databázi autorit NKČR
@@ -140,11 +145,9 @@ class create_table:
 """ + actual_link + """
             
 == Starší ==
-{{Div col|colwidth=10em}}
-""" + older_weeks_list + """
-{{Div col end}}
+""" + older_weeks_list
             
-"""
+
 
                 page = pywikibot.Page(pywikibot.Site('wikidata', fam='wikidata'), 'Wikidata:WikiProject Czech Republic/New authorities')
                 page.text = text_main_page
@@ -169,7 +172,6 @@ class create_table:
                  '40', '41', '42', '43', '44', '45', '46', '47', '48', '49',
                  '50', '51', '52'
                  ]
-        weeks.reverse()
 
         for year in years:
             for week in weeks:

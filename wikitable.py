@@ -3,16 +3,16 @@ from jinja2 import Template
 class wikitable:
 
     caption = ''
-    class_name = 'wikitable'
+    class_name:str = 'wikitable'
     header_columns = []
     lines = []
     template_text = '''
 {{'{'}}| class="{{ class_name }}"
 |+ {{ caption }}
 |-
-! {% for column in header_columns %} {% if loop.index >= 1 %}!!{% endif %} {{ column }} {% endfor %}
+! {% for column in header_columns %} {% if loop.index > 1 %}!!{% endif %} {{ column }} {% endfor %}
 {% for line in lines %}|-
-| {% for col in line %}{% if loop.index >= 1 %}||{% endif %} {{col}} {% endfor %}
+| {% for col in line %}{% if loop.index > 1 %}||{% endif %} {{col}} {% endfor %}
 {% endfor %}
 |{{'}'}}
     '''
