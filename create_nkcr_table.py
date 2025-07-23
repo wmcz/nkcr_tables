@@ -9,7 +9,7 @@ import requests
 from autrecord import AutRecord
 import re
 import nkcrlib
-from wikitable import wikitable
+from wikitable import WikiTable
 # import urllib
 # from datetime import datetime
 # from quickstatements import quickstatements
@@ -107,14 +107,11 @@ class create_table:
             self.quick_lines.append(nkcrlib.create_quickstatements_link(record_in_nkcr, None, True))
         return False
 
-
     def load_to_table(self, file_name):
         nkcrlib.map_xml(self.table_line, file_name)
 
-
     def save_page(self, week_num, table, quiet = False):
         site = pywikibot.Site('wikidata', 'wikidata')
-        # site = pywikibot.getSite('wikidata', 'wikidata')
 
         header_text = "'''Nové záznamy v databázi autorit NKČR za " + str(week_num) + ". týden roku " + self.year + ".'''"
 
@@ -188,6 +185,7 @@ class create_table:
 
     def prepare_pages_for_older_updater(self, exist_pages, actual_year, actual_week_num):
         prepared = []
+        exist_pages.reverse()
         for wk in exist_pages:
             if (int(wk['year']) == actual_year and actual_week_num == int(wk['week'])):
                 continue
@@ -282,7 +280,7 @@ class create_table:
         if (file is not False):
 
             self.load_to_table(file_name=file)
-            wt = wikitable()
+            wt = WikiTable()
             week_num = nkcrlib.get_week_num_to_download(week_num_force)
             if year_num_force is None:
                 spl = file.split('-')
@@ -290,6 +288,8 @@ class create_table:
             else:
                 self.year = str(year_num_force)
             wt.set_caption(str(week_num) + '. týden')
+            wt.set_week_num(int(week_num))
+            wt.set_year(int(self.year))
             wt.add_header_column('NKČR')
             wt.add_header_column('Jméno')
             # wt.add_header_column('Křestní jméno')
@@ -323,7 +323,7 @@ class create_table:
             for lin in self.quick_lines:
                 print(lin)
 
-            printed_table = wt.print_table()
+            printed_table = wt.render()
             self.save_page(week_num, printed_table, quiet)
 
     def __init__(self):

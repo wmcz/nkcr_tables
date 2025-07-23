@@ -154,10 +154,10 @@ class quickstatements:
         now_dt_string = self.now_time()
 
         dt_string: str = ''
-        if isinstance(value, int) and len(str(value)) == 4:
+        if len(str(value)) == 4:
             precision = '9'  # Year precision
             try:
-                dt = datetime(value, 1, 1)
+                dt = datetime(int(value), 1, 1)
                 dt_string = dt.strftime(f"+%Y-%m-%dT%H:%M:%SZ/{precision}")
             except ValueError:
                 dt_string = ''

@@ -1,481 +1,229 @@
 from pymarc import Record
 import re
 import datetime
+from typing import Optional, Dict, Any
+
+
 class AutRecord(Record):
-    def name(self):
-        """
-        Returns the title of the record (245 $a an $b).
-        """
-        name = None
-        try:
-            name = self['100']['a']
+    """
+    A subclass of pymarc.Record to provide methods for accessing specific
+    fields in an authority record.
+    """
 
-        except KeyError:
+    def name(self) -> Optional[str]:
+        """
+        Returns the name of the record from various fields.
+        Searches fields 100, 110, 111, 150, 151, 130, and 240 for the name.
+        """
+        for tag in ['100', '110', '111', '150', '151', '130', '240']:
+            if tag in self:
+                if 'a' in self[tag]:
+                    name = self[tag]['a']
+                    if name:
+                        if name.endswith(','):
+                            return name[:-1]
+                        return name
+                if 't' in self[tag]:
+                    name = self[tag]['t']
+                    if name:
+                        return name
+        return None
+
+    def aut(self) -> Optional[str]:
+        """
+        Returns the authority record identifier from field 001.
+        """
+        if '001' in self:
+            return self['001'].data
+        return None
+
+    def birth_death(self) -> Optional[str]:
+        """
+        Returns the birth and death dates from field 100, subfield 'd'.
+        """
+        if '100' in self and 'd' in self['100']:
+            return self['100']['d']
+        return None
+
+    def birth(self) -> Optional[str]:
+        """
+        Returns the birth date from field 046, subfield 'f'.
+        """
+        if '046' in self and 'f' in self['046']:
+            return self['046']['f']
+        return None
+
+    def death(self) -> Optional[str]:
+        """
+        Returns the death date from field 046, subfield 'g'.
+        """
+        if '046' in self and 'g' in self['046']:
+            return self['046']['g']
+        return None
+
+    def note(self) -> Optional[str]:
+        """
+        Returns the note from field 678, subfield 'a'.
+        """
+        if '678' in self and 'a' in self['678']:
+            return self['678']['a']
+        return None
+
+    def wikidata024(self, type_of_link: str = 'wikidata') -> Optional[str]:
+        """
+        Returns the identifier from field 024 for a given type of link.
+        """
+        for field in self.get_fields('024'):
+            if field['2'] == type_of_link:
+                return field['a']
+        return None
+
+    def wikipedia856(self) -> Optional[Dict[str, str]]:
+        """
+        Parses field 856 to find a Wikipedia link and returns its components.
+        """
+        for field in self.get_fields('856'):
+            if 'u' in field:
+                match = re.search(r"https://([a-z]+)\.(wikipedia|wikisource)\.org/wiki/(.*)", field['u'], re.IGNORECASE)
+                if match:
+                    return {
+                        'lang': match.group(1),
+                        'project': match.group(2),
+                        'article': match.group(3),
+                        'link': field['u']
+                    }
+        return None
+
+    def source670(self, type_of_source: str = 'wikidata') -> Optional[Dict[str, str]]:
+        """
+        Parses field 670 to find a source link and returns its components.
+        """
+        for field in self.get_fields('670'):
+            if 'u' in field:
+                if type_of_source == 'wikidata':
+                    regex = r"https://([a-z]+)\.wikidata\.org/wiki/(.*)"
+                else:
+                    regex = r"https://([a-z]+)\.(wikipedia|wikisource)\.org/wiki/(.*)"
+
+                match = re.search(regex, field['u'], re.IGNORECASE)
+                if match:
+                    groups = match.groups()
+                    return {
+                        'lang': groups[0] if type_of_source != 'wikidata' else None,
+                        'project': 'wikidata' if type_of_source == 'wikidata' else groups[1],
+                        'article': groups[1] if type_of_source == 'wikidata' else groups[2],
+                        'link': field['u']
+                    }
+        return None
+
+    def birth_date(self) -> Optional[datetime.datetime]:
+        """
+        Parses the birth date from the note field (678).
+        """
+        note = self.get_note()
+        if not note:
+            return None
+
+        mapping = {' ledna': '.1.', ' února': '.2.', ' března': '.3.', ' dubna': '.4.',
+                   ' května': '.5.', ' června': '.6.', ' července': '.7.', ' srpna': '.8.',
+                   ' září': '.9.', ' října': '.10.', ' listopadu': '.11.', ' prosince': '.12.'}
+        for k, v in mapping.items():
+            note = note.replace(k, v)
+
+        match = re.search(r"(?:Narozen|Narozena|narozen|narozena) (\d+)\.(\d+)\.(\d+)", note, re.IGNORECASE)
+        if match:
             try:
-                prep = self['110']
-                name = prep['t']
-                if (name is None):
-                    raise(KeyError('err'))
-            except KeyError:
-                try:
-                    name = self['110']['a']
-                    try:
-                        second_name = self['110']['b']
-                    except KeyError:
-                        second_name = None
-                    if second_name is not None:
-                        name = name + ' ' + second_name
-                except KeyError:
-                    try:
-                        name = self['111']['a']
-                    except KeyError:
-                        try:
-                            name = self['150']['a']
-                        except KeyError:
-                            try:
-                                name = self['151']['a']
-                            except KeyError:
-                                try:
-                                    name = self['130']['a']
-                                except KeyError:
-                                    try:
-                                        name = self['240']['a']
-                                    except KeyError:
-                                        name = None
-        last_character = str(name)[-1]
-        if (str(last_character) == ','):
-            name = name[:-1]
-        return name
-
-    def aut(self):
-        """
-        Returns the title of the record (245 $a an $b).
-        """
-        try:
-            # name = self['100']['7']
-            name = self['001'].data
-        except TypeError:
-            name = None
-        except AttributeError:
-            name = None
-
-        return name
-
-    def birth_death(self):
-        """
-                Returns the title of the record (245 $a an $b).
-                """
-        try:
-            name = self['100']['d']
-        except TypeError:
-            name = None
-
-        return name
-
-    def birth(self):
-        """
-                Returns the birth of the record (46f $a an $b).
-                """
-        try:
-            name = str(self['46']['f'])
-        except TypeError:
-            try:
-                name = self['046']['f']
-                if (name is not None):
-                    name = str(name)
-            except TypeError:
-                name = None
-        except KeyError:
-            try:
-                name = self['046']['f']
-                if name is not None:
-                    name = str(name)
-            except KeyError:
-                name = None
-
-        return name
-
-    def death(self):
-        """
-                Returns the death of the record (46g $a an $b).
-                """
-        try:
-            name = str(self['46']['g'])
-        except TypeError:
-            try:
-                name = self['046']['g']
-                if name is not None:
-                    name = str(name)
-            except TypeError:
-                name = None
-        except KeyError:
-            try:
-                name = self['046']['g']
-                if name is not None:
-                    name = str(name)
-            except KeyError:
-                name = None
-
-        return name
-
-    def note(self):
-        """
-                Returns the title of the record (678a $a an $b).
-                """
-        try:
-            name = self['678']['a']
-        except KeyError:
-            name = None
-
-        return name
-
-    def wikidata024(self, type_of_link='wikidata'):
-        '''
-        <datafield tag="024" ind1="7" ind2=" ">
-            <subfield code="a">Q98804556</subfield>
-            <subfield code="2">wikidata</subfield>
-        </datafield>
-
-        :return:
-        '''
-        name = None
-        name_to_return = None
-        try:
-            isexist = self['024']
-            if isexist is not None:
-                ex = self.get_fields('024')
-                for line in ex:
-                    # print(line)
-                    name = line['a']
-                    typ = line['2']
-
-                    if (str(typ) == type_of_link):
-                        name_to_return = name
-        except TypeError:
-            name = None
-        except KeyError:
-            name = None
-
-        return name_to_return
-
-    def wikipedia856(self):
-        '''
-        <datafield tag="856" ind1="4" ind2="2">
-            <subfield code="u">https://sv.wikipedia.org/wiki/Brigitte_Mral</subfield>
-            <subfield code="4">N</subfield>
-        </datafield>
-
-        :return:
-        '''
-        link = None
-        try:
-            isexist = self['856']
-            if isexist is not None:
-                ex = self.get_fields('856')
-                for line in ex:
-                    # print(line)
-                    name = line['u']
-                    typ = line['4']
-
-                    import re
-
-                    regex = r"(http|https):\/\/([a-z]+)\.(wikipedia|wikisource)\.org\/wiki\/(.*)"
-
-                    matches = re.search(regex, name, re.IGNORECASE)
-                    link = None
-                    try:
-                        groups = matches.groups()
-                        lang = groups[1]
-                        wikiproject = groups[2]
-                        article = groups[3]
-                        ret_dict = {
-                            'lang' : lang,
-                            'project' : wikiproject,
-                            'article' : article,
-                            'link' : name
-                        }
-                        link = ret_dict
-                        return link
-                    except AttributeError as e:
-                        link = None
-                    except ValueError as e:
-                        link = None
-        except TypeError:
-            link = None
-        except KeyError:
-            link = None
-
-        return link
-
-    def source670(self, type_of_source='wikidata'):
-        '''
-        <datafield tag="670" ind1=" " ind2=" ">
-            <subfield code="a">www(Wikidata, Gabriel Chesneau), cit. 9. 6. 2020</subfield>
-            <subfield code="b">biografické údaje</subfield>
-            <subfield code="u">https://www.wikidata.org/wiki/Q15971728</subfield>
-        </datafield>
-
-        :return:
-        '''
-        link = None
-        try:
-            isexist = self['670']
-            if isexist is not None:
-                ex = self.get_fields('670')
-
-                for line in ex:
-                    # print(line)
-                    try:
-                        name = line['u']
-                    except KeyError as e:
-                        name = None
-                    if (name is None):
-                        name = ''
-
-                    import re
-
-                    if (type_of_source == 'wikidata'):
-                        regex = r"(http|https):\/\/([a-z]+)\.(wikidata)\.org\/wiki\/(.*)"
-                    else:
-                        regex = r"(http|https):\/\/([a-z]+)\.(wikipedia|wikisource)\.org\/wiki\/(.*)"
-
-                    matches = re.search(regex, name, re.IGNORECASE)
-                    link = None
-                    try:
-                        groups = matches.groups()
-                        lang = groups[1]
-                        wikiproject = groups[2]
-                        article = groups[3]
-                        ret_dict = {
-                            'lang' : lang,
-                            'project' : wikiproject,
-                            'article' : article,
-                            'link' : name
-                        }
-                        # link = ret_dict
-                        return ret_dict
-                    except AttributeError as e:
-                        link = None
-                    except ValueError as e:
-                        link = None
-                    except KeyError as e:
-                        link = None
-        except TypeError:
-            link = None
-        except KeyError:
-            link = None
-
-        return link
-
-    def birth_date(self)->datetime:
-        """
-                Returns the title of the record (245 $a an $b).
-                """
-        try:
-            note = self['678']['a']
-            import re
-
-            mapping = {' ledna': '1.', ' února': '2.', ' března': '3.', ' dubna': '4.',
-                       ' května': '5.', ' června': '6.', ' července': '7.', ' srpna': '8.',
-                       ' září': '9.', ' října': '10.', ' listopadu': '11.', ' prosince': '12.'}
-            for k, v in mapping.items():
-                note = note.replace(k, v)
-
-
-            regex = r"(Narozen|Narozena|narozen|narozena) (\d+)\.\D*(\d+)\.\D*(\d+).*"
-
-            matches = re.search(regex, note, re.IGNORECASE)
-            bdate = None
-            try:
-                groups = matches.groups()
-                x = datetime.datetime(int(groups[3]), int(groups[2]), int(groups[1]))
-                bdate = x
-            except AttributeError as e:
-                bdate = None
-            except ValueError as e:
-                bdate = None
-        except TypeError as e:
-            # print(e)
-            bdate = None
-        except KeyError:
-            bdate = None
-
-        return bdate
-
-    def death_date(self)->datetime:
-        """
-                Returns the title of the record (245 $a an $b).
-                """
-        try:
-            note = self['678']['a']
-            import re
-
-            mapping = {' ledna': '1.', ' února': '2.', ' března': '3.', ' dubna': '4.',
-                       ' května': '5.', ' června': '6.', ' července': '7.', ' srpna': '8.',
-                       ' září': '9.', ' října': '10.', ' listopadu': '11.', ' prosince': '12.'}
-            for k, v in mapping.items():
-                note = note.replace(k, v)
-
-            regex = r"(Zemřel|Zemřela|zemřel|zemřela) (\d+)\.\D*(\d+)\.\D*(\d+).*"
-
-            matches = re.search(regex, note, re.IGNORECASE)
-            bdate = None
-            try:
-                groups = matches.groups()
-                x = datetime.datetime(int(groups[3]), int(groups[2]), int(groups[1]))
-                bdate = x
-            except AttributeError as e:
-                bdate = None
-            except ValueError as e:
-                bdate = None
-        except TypeError:
-            bdate = None
-        except KeyError:
-            bdate = None
-
-        return bdate
-
-    def first_name(self):
-        """
-                Returns the title of the record (245 $a an $b).
-                """
-        try:
-            name = self['100']['a']
-            assert isinstance(name, str)
-            splits = name.replace(',','').split(' ')
-            length = len(splits)
-            ret = splits[len(splits)-1]
-
-            import re
-            regex = r"(.*),\W+([\w‘ \.]*)(,*)"
-            matches = re.search(regex, name, re.IGNORECASE)
-            try:
-                groups = matches.groups()
-                name = groups[1]
-            except AttributeError as e:
-                name = ret
-            except ValueError as e:
-                name = ret
-        except TypeError:
-            name = None
-        except KeyError:
-            name = None
-
-        return name
-
-    def last_name(self):
-        """
-                Returns the title of the record (245 $a an $b).
-                """
-        try:
-            name = self['100']['a']
-            assert isinstance(name, str)
-            splits = name.replace(',', '').split(' ')
-            length = len(splits)
-            ret = splits[0]
-
-            import re
-            regex = r"(.*),\W+([\w‘ \.]*)(,*)"
-            matches = re.search(regex, name, re.IGNORECASE)
-            try:
-                groups = matches.groups()
-                name = groups[0]
-            except AttributeError as e:
-                name = ret
-            except ValueError as e:
-                name = ret
-        except TypeError:
-            name = None
-        except KeyError:
-            name = None
-
-        return name
-
-    def status(self):
-        """
-                        Returns the title of the record (245 $a an $b).
-                        """
-        try:
-            name = self['950']['a']
-        except TypeError:
-            name = None
-        except KeyError:
-            name = None
-
-        return name
-
-    def okres(self):
-        """
-                        Returns the title of the record (245 $a an $b).
-                        """
-        try:
-            name = self['751']['a']
-        except TypeError:
-            try:
-                name = self['151']['a']
-            except TypeError:
-                name = None
-            except KeyError:
-                name = None
-        except KeyError:
-            try:
-                name = self['151']['a']
-            except TypeError:
-                name = None
-            except KeyError:
-                name = None
-
-        return name
-
-    def mesto(self):
-        """
-                        Returns the title of the record (245 $a an $b).
-                        """
-        try:
-            name = self['751']['a']
-        except TypeError:
-            try:
-                name = self['151']['a']
-            except TypeError:
-                name = None
-            except KeyError:
-                name = None
-        except KeyError:
-            try:
-                name = self['151']['a']
-            except TypeError:
-                name = None
-            except KeyError:
-                name = None
-
-        return name
-
-    def gender(self):
-        """
-                        Returns the title of the record (245 $a an $b).
-                        """
-        try:
-            gender = self['375']['a']
-            if (gender == 'muž'):
-                return "man"
-            elif (gender == 'žena'):
-                return "woman"
-            else:
+                return datetime.datetime(int(match.group(3)), int(match.group(2)), int(match.group(1)))
+            except ValueError:
                 return None
-        except TypeError:
-            gender = None
-        except KeyError:
-            gender = None
+        return None
 
-        return gender
+    def death_date(self) -> Optional[datetime.datetime]:
+        """
+        Parses the death date from the note field (678).
+        """
+        note = self.get_note()
+        if not note:
+            return None
 
-    def geographicNameWithoutBrackets(self):
+        mapping = {' ledna': '.1.', ' února': '.2.', ' března': '.3.', ' dubna': '.4.',
+                   ' května': '.5.', ' června': '.6.', ' července': '.7.', ' srpna': '.8.',
+                   ' září': '.9.', ' října': '.10.', ' listopadu': '.11.', ' prosince': '.12.'}
+        for k, v in mapping.items():
+            note = note.replace(k, v)
+
+        match = re.search(r"(?:Zemřel|Zemřela|zemřel|zemřela) (\d+)\.(\d+)\.(\d+)", note, re.IGNORECASE)
+        if match:
+            try:
+                return datetime.datetime(int(match.group(3)), int(match.group(2)), int(match.group(1)))
+            except ValueError:
+                return None
+        return None
+
+    def first_name(self) -> Optional[str]:
+        """
+        Extracts the first name from field 100, subfield 'a'.
+        """
+        if '100' in self and 'a' in self['100']:
+            name = self['100']['a']
+            if ',' in name:
+                return name.split(',')[1].strip()
+        return None
+
+    def last_name(self) -> Optional[str]:
+        """
+        Extracts the last name from field 100, subfield 'a'.
+        """
+        if '100' in self and 'a' in self['100']:
+            name = self['100']['a']
+            if ',' in name:
+                return name.split(',')[0].strip()
+        return None
+
+    def status(self) -> Optional[str]:
+        """
+        Returns the status from field 950, subfield 'a'.
+        """
+        if '950' in self and 'a' in self['950']:
+            return self['950']['a']
+        return None
+
+    def okres(self) -> Optional[str]:
+        """
+        Returns the district from field 751 or 151, subfield 'a'.
+        """
+        for tag in ['751', '151']:
+            if tag in self and 'a' in self[tag]:
+                return self[tag]['a']
+        return None
+
+    def mesto(self) -> Optional[str]:
+        """
+        Returns the city from field 751 or 151, subfield 'a'.
+        """
+        for tag in ['751', '151']:
+            if tag in self and 'a' in self[tag]:
+                return self[tag]['a']
+        return None
+
+    def gender(self) -> Optional[str]:
+        """
+        Returns the gender from field 375, subfield 'a'.
+        Maps Czech gender terms to 'man' or 'woman'.
+        """
+        if '375' in self and 'a' in self['375']:
+            gender = self['375']['a'].lower()
+            if gender == 'muž':
+                return 'man'
+            elif gender == 'žena':
+                return 'woman'
+        return None
+
+    def geographic_name_without_brackets(self) -> Optional[str]:
+        """
+        Returns the geographic name without brackets and 'Czechia'.
+        """
         name = self.name()
-        try:
-            return re.sub("[\(\[].*?[\)\]]", "", name).replace('Czechia', '')
-        except TypeError as e:
-            return self.name()
-        except KeyError:
-            return self.name()
-        except TypeError as e:
-            return self.name()
+        if name:
+            return re.sub(r"[\(\[].*?[\)\]]", "", name).replace('Czechia', '').strip()
+        return None

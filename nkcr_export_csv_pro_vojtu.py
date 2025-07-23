@@ -4,7 +4,7 @@ from autrecord import AutRecord
 import datetime
 import re
 import nkcrlib
-from wikitable import wikitable
+from wikitable import WikiTable
 
 table = []
 write_from = 'ge1035006'

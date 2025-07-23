@@ -52,7 +52,7 @@ class nkcr_record:
         self.birth_from_note = nkcrlib.resolve_birth_from_note(self.record)
         self.death_from_note = nkcrlib.resolve_death_from_note(self.record)
         self.name = self.record.name()
-        self.geographicNameWithoutBrackets = self.record.geographicNameWithoutBrackets()
+        self.geographicNameWithoutBrackets = self.record.geographic_name_without_brackets()
         self.first_name = self.record.first_name()
         self.wikidata_field = self.record.wikidata024('wikidata')
         self.orcid_field = self.record.wikidata024('orcid')
