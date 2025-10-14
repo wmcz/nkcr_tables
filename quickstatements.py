@@ -90,8 +90,9 @@ class quickstatements:
             value: The alias string.
             lang: The language code (e.g., 'cs', 'en'). Defaults to 'cs'.
         """
-        value = self.ENCLOSURE + value + self.ENCLOSURE
-        self.add_command(self.which_item + self.SEPARATOR + self.ALIAS + lang + self.SEPARATOR + value + self.END_LINE)
+        if (value is not None):
+            value = self.ENCLOSURE + value + self.ENCLOSURE
+            self.add_command(self.which_item + self.SEPARATOR + self.ALIAS + lang + self.SEPARATOR + value + self.END_LINE)
 
     def set_description(self, value: str, lang: str = 'cs') -> None:
         """

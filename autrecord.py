@@ -22,11 +22,34 @@ class AutRecord(Record):
                     if name:
                         if name.endswith(','):
                             return name[:-1]
+                        if name.endswith('.') and 'b' in self[tag]:
+                            return name[:-1] + ', ' + self[tag]['b']
                         return name
                 if 't' in self[tag]:
                     name = self[tag]['t']
                     if name:
                         return name
+        return None
+
+    def alias(self) -> Optional[str]:
+        """
+        Returns the name of the record from various fields.
+        Searches fields 400 for the alias.
+        """
+        for tag in ['400']:
+            if tag in self:
+                if 'a' in self[tag]:
+                    alias = self[tag]['a']
+                    if alias:
+                        if alias.endswith(','):
+                            return alias[:-1]
+                        if alias.endswith('.') and 'b' in self[tag]:
+                            return alias[:-1] + ', ' + self[tag]['b']
+                        return alias
+                if 't' in self[tag]:
+                    alias = self[tag]['t']
+                    if alias:
+                        return alias
         return None
 
     def aut(self) -> Optional[str]:

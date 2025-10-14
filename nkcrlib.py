@@ -208,6 +208,7 @@ def create_quickstatements_link(record_in_nkcr, force_qid = None, quickstatement
             link.set_label(record_in_nkcr.geographicNameWithoutBrackets, 'de')
 
     link.set_nkcr(record_in_nkcr.aut, record_in_nkcr.name)
+    link.set_alias(record_in_nkcr.alias)
     link.set_date(record_in_nkcr.aut, link.BIRTH, record_in_nkcr.birth_to_quickstatements)
     link.set_date(record_in_nkcr.aut, link.DEATH, record_in_nkcr.death_to_quickstatements)
 
