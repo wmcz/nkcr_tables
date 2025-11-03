@@ -94,6 +94,18 @@ class quickstatements:
             value = self.ENCLOSURE + value + self.ENCLOSURE
             self.add_command(self.which_item + self.SEPARATOR + self.ALIAS + lang + self.SEPARATOR + value + self.END_LINE)
 
+    def set_aliases(self, aliases) -> None:
+        """
+        Sets an alias for the current item in a specified language.
+
+        Args:
+            value: The alias string.
+            lang: The language code (e.g., 'cs', 'en'). Defaults to 'cs'.
+        """
+        if (aliases is not None):
+            for alias in aliases:
+                self.set_alias(alias)
+
     def set_description(self, value: str, lang: str = 'cs') -> None:
         """
         Sets the description for the current item in a specified language.

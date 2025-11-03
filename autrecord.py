@@ -1,7 +1,7 @@
 from pymarc import Record
 import re
 import datetime
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, List
 
 
 class AutRecord(Record):
@@ -31,25 +31,37 @@ class AutRecord(Record):
                         return name
         return None
 
-    def alias(self) -> Optional[str]:
+    def aliases(self) -> Optional[List[str]]:
         """
         Returns the name of the record from various fields.
         Searches fields 400 for the alias.
         """
-        for tag in ['400']:
-            if tag in self:
-                if 'a' in self[tag]:
-                    alias = self[tag]['a']
-                    if alias:
-                        if alias.endswith(','):
-                            return alias[:-1]
-                        if alias.endswith('.') and 'b' in self[tag]:
-                            return alias[:-1] + ', ' + self[tag]['b']
-                        return alias
-                if 't' in self[tag]:
-                    alias = self[tag]['t']
-                    if alias:
-                        return alias
+        start = ''
+        aliases = []
+        for tag in self.get_fields('400'):
+            if 'a' in tag:
+                alias = tag['a']
+                if alias:
+                    if alias.endswith(','):
+                        alias = alias[:-1]
+                    # Pokud má alias čárku, otočit pořadí slov
+                    if ',' in alias:
+                        parts = alias.split(',', 1)
+                        if len(parts) == 2 or len(parts) == 3 or len(parts) == 4:
+                            alias = parts[1].strip() + ' ' + parts[0].strip()
+
+                    aliases.append(alias)
+            # if 't' in tag:
+            #     alias = tag['t']
+            #     if alias:
+            #         # Pokud má alias čárku, otočit pořadí slov
+            #         if ',' in alias:
+            #             parts = alias.split(',', 1)
+            #             if len(parts) == 2 or len(parts) == 3 or len(parts) == 4:
+            #                 alias = parts[1].strip() + ' ' + parts[0].strip()
+            #         aliases.append(alias)
+        if (len(aliases) > 0):
+            return aliases
         return None
 
     def aut(self) -> Optional[str]:
