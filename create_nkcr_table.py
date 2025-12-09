@@ -1,5 +1,6 @@
 import json
 import os
+import time
 # import sys
 from typing import List, Any
 from collections import defaultdict
@@ -203,18 +204,31 @@ class create_table:
 
     def already_filled_in_wikidata(self, nkcr_aut=''):
         PROPERTY = 'P691'
-        try:
-            hub_link = "https://hub.toolforge.org/" + PROPERTY + ":" + str(nkcr_aut) + "?format=json"
-            response = requests.get(hub_link)
-            json_record = response.text
-            response.status_code
-            if response.status_code == 200:
-                data_record = json.loads(json_record)
-                wd_record = data_record['origin']['qid']
-                return True
-            return False
-        except (KeyError, TypeError):
-            return False
+        hub_link = "https://hub.toolforge.org/" + PROPERTY + ":" + str(nkcr_aut) + "?format=json"
+        for i in range(5):
+            try:
+                response = requests.get(hub_link)
+                if str(nkcr_aut) == 'xx0338894':
+                    stop = 'here'
+                if response.status_code == 200:
+                    json_record = response.text
+                    data_record = json.loads(json_record)
+                    wd_record = data_record['origin']['qid']
+                    return True
+
+                if response.status_code != 404:
+                    return False  # fail fast on other errors
+
+                # It is a 404. Let's check if we should retry.
+                if i < 4:
+                     time.sleep(2)
+
+            except (KeyError, TypeError, requests.exceptions.RequestException, json.decoder.JSONDecodeError):
+                if i < 4:
+                    time.sleep(2)
+                else:
+                    return False
+        return False
 
 
     def get_qid_by_viaf_id(self, viaf_id=''):

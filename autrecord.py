@@ -155,7 +155,7 @@ class AutRecord(Record):
         """
         Parses the birth date from the note field (678).
         """
-        note = self.get_note()
+        note = self.note()
         if not note:
             return None
 
@@ -177,7 +177,7 @@ class AutRecord(Record):
         """
         Parses the death date from the note field (678).
         """
-        note = self.get_note()
+        note = self.note()
         if not note:
             return None
 
