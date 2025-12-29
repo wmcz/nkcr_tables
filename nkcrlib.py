@@ -90,6 +90,9 @@ def get_week_num_to_download(force_week = None):
     year = actual_week_num_obj.year
     if year == 2025:
         week_num_to_download = actual_week_num - 2
+        if (actual_week_num == 1):
+            week_num_to_download = 51
+
     else:
         week_num_to_download = actual_week_num - 1
         if (week_num_to_download == 0):
