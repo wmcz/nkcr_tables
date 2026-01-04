@@ -155,6 +155,8 @@ class AutRecord(Record):
         """
         Parses the birth date from the note field (678).
         """
+        if str(self.aut()) == 'hka20251281612':
+            stop = 'here'
         note = self.note()
         if not note:
             return None
@@ -165,10 +167,10 @@ class AutRecord(Record):
         for k, v in mapping.items():
             note = note.replace(k, v)
 
-        match = re.search(r"(?:Narozen|Narozena|narozen|narozena) (\d+)\.(\d+)\.(\d+)", note, re.IGNORECASE)
+        match = re.search(r"(?:Narozen|Narozena|narozen|narozena)\s*(\d+)\.\s*(\d+)\.\s*(\d+)", note, re.IGNORECASE)
         if match:
             try:
-                return datetime.datetime(int(match.group(3)), int(match.group(2)), int(match.group(1)))
+                    return datetime.datetime(int(match.group(3)), int(match.group(2)), int(match.group(1)))
             except ValueError:
                 return None
         return None
@@ -187,7 +189,7 @@ class AutRecord(Record):
         for k, v in mapping.items():
             note = note.replace(k, v)
 
-        match = re.search(r"(?:Zemřel|Zemřela|zemřel|zemřela) (\d+)\.(\d+)\.(\d+)", note, re.IGNORECASE)
+        match = re.search(r"(?:Zemřel|Zemřela|zemřel|zemřela)\s*(\d+)\.\s*(\d+)\.\s*(\d+)", note, re.IGNORECASE)
         if match:
             try:
                 return datetime.datetime(int(match.group(3)), int(match.group(2)), int(match.group(1)))

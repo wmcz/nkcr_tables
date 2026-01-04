@@ -161,7 +161,7 @@ class create_table:
 
         exist_weeks = []
 
-        years = ['2020', '2021', '2022', '2023', '2024', '2025']
+        years = ['2020', '2021', '2022', '2023', '2024', '2025', '2026', '2027', '2028', '2029', '2030']
 
         weeks = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
                  '10', '11', '12', '13', '14', '15', '16', '17', '18', '19',
@@ -208,7 +208,7 @@ class create_table:
         for i in range(5):
             try:
                 response = requests.get(hub_link)
-                if str(nkcr_aut) == 'xx0338894':
+                if str(nkcr_aut) == 'hka20251281612':
                     stop = 'here'
                 if response.status_code == 200:
                     json_record = response.text
