@@ -1,4 +1,5 @@
 import codecs
+
 class Logger:
 
     def __init__(self, entityType, logType):
@@ -7,11 +8,10 @@ class Logger:
         self.loadedSet = set()
         try:
             self.loadFileOnce()
-        except FileNotFoundError as e:
+        except FileNotFoundError:
             self.isCompleteFile('first')
 
     def log(self, text, errorText = False, printLog = True):
-
         if (self.logType == 'err'):
             if (errorText):
                 text = text + ';' + errorText
@@ -50,24 +50,10 @@ class Logger:
 
     def isCompleteFile(self, entity):
         try:
-            pass
-            # file = codecs.open("log_" + self.entityType + ".txt", "r", "utf-8")
-            # lines = file.readlines()
-            # list_entity = list()
-            # file.close()
-
-            # setLines = set(lines)
             if entity in self.loadedSet:
                 return True
             else:
                 return False
-            #TODO opravit!
-
-            # try:
-            #     list_entity.index(entity)
-            #     return True
-            # except ValueError:
-            #     return False
-        except IOError as e:
+        except IOError:
             print("Not exist file")
             codecs.open('log_' + self.entityType + '.txt', 'w', 'utf-8')

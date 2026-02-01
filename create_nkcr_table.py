@@ -1,22 +1,16 @@
 import json
 import os
+import re
 import time
-# import sys
-from typing import List, Any
 from collections import defaultdict
 
 import requests
 
 from autrecord import AutRecord
-import re
 import nkcrlib
 from wikitable import WikiTable
-# import urllib
-# from datetime import datetime
-# from quickstatements import quickstatements
 from nkcr_record import nkcr_record
 
-# from pywikibot import config, i18n, pagegenerators, textlib, page, site
 import pywikibot
 
 WEEK_NUM_CONST = None
@@ -24,33 +18,25 @@ WEEK_NUM_CONST = None
 OLDER_UPDATER_PAGE_COUNT = 10
 
 class create_table:
-    table = []
 
-    quick_lines = []
-
-    year: str = ''
-    update_main_page: bool = True
-
-    debug: bool = False
+    def __init__(self):
+        self.table: list = []
+        self.quick_lines: list = []
+        self.year: str = ''
+        self.update_main_page: bool = True
+        self.debug: bool = False
 
     def table_line(self, record, count, mydata):
         assert isinstance(record, AutRecord)
         aut = record.aut()
-        # if (aut == 'js20231197909'):
-        #     print('ano')
         record_in_nkcr = nkcr_record(record)
-        # print('table line ' + str(record_in_nkcr.aut))
         if (count % 10 == 0):
             print('nkcr record counter: ' + str(count))
 
         if self.already_filled_in_wikidata(record_in_nkcr.aut):
             return False
 
-        if (not self.debug):
-            #qid_from_viaf = self.find_on_viaf(str(record_in_nkcr.aut))
-            qid_from_viaf = None
-        else:
-            qid_from_viaf = None
+        qid_from_viaf = None
 
         if (not self.debug):
             if (qid_from_viaf is not None):
@@ -65,39 +51,15 @@ class create_table:
             if (record_in_nkcr.wikidata_from_nkcr is None and qid_from_wiki is not None):
                 record_in_nkcr.wikidata_from_nkcr = qid_from_wiki
 
-        birth_to_table = ""
-        if record_in_nkcr.birth_to_quickstatements is not None:
-            birth_to_table = record_in_nkcr.birth_to_quickstatements
+        birth_to_table = record_in_nkcr.birth_to_quickstatements if record_in_nkcr.birth_to_quickstatements is not None else ""
+        death_to_table = record_in_nkcr.death_to_quickstatements if record_in_nkcr.death_to_quickstatements is not None else ""
 
-        death_to_table = ""
-        if record_in_nkcr.death_to_quickstatements is not None:
-            death_to_table = record_in_nkcr.death_to_quickstatements
         table_columns = {
             'nkcr_aut': record_in_nkcr.aut,
             'name': str(record_in_nkcr.name) + nkcrlib.create_nkcr_link(record_in_nkcr.aut),
-            # 'first_name' : record_in_nkcr.first_name,
-            # 'last_name' : record_in_nkcr.last_name,
-            # 'narozen' : record_in_nkcr.birth,
-            # 'zemrel' : record_in_nkcr.death,
-            # 'okres' : record_in_nkcr.county,
             'birth_qs': birth_to_table,
             'death_qs': death_to_table,
             'popis': record_in_nkcr.description,
-            # 'birth_from_note' : record_in_nkcr.birth_from_note,
-            # 'death_from_note' : record_in_nkcr.death_from_note,
-            # 'birth_note_precision' : record_in_nkcr.birth_note_precision,
-            # 'death_note_precision' : record_in_nkcr.death_note_precision,
-            # 'birth_wd' : record_in_nkcr.birth_wd,
-            # 'death_wd' : record_in_nkcr.death_wd,
-            # 'type' : record_in_nkcr.type,
-            # 'new' : record_in_nkcr.new,
-            # 'updated' : record_in_nkcr.updated,
-            # 'orcid' : record_in_nkcr.orcid_field,
-            # 'wikidata_from_nkcr' : record_in_nkcr.wikidata_from_nkcr,
-            # 'wikilang_from_nkcr' : record_in_nkcr.wikilang_from_nkcr,
-            # 'wikiarticle_from_nkcr' : record_in_nkcr.wikiarticle_from_nkcr,
-            # 'wikiproject_from_nkcr' : record_in_nkcr.wikiproject_from_nkcr,
-            # 'wikilink_from_nkcr' : record_in_nkcr.wikilink_from_nkcr,
             'qid_from_viaf': wd_link,
             'akce': nkcrlib.create_search_link(record_in_nkcr.name) + "&nbsp;/&nbsp;" + nkcrlib.create_quickstatements_link(
                 record_in_nkcr)
@@ -111,51 +73,105 @@ class create_table:
     def load_to_table(self, file_name):
         nkcrlib.map_xml(self.table_line, file_name)
 
+    def _resolve_file_path(self, week_num_force, year_num_force, from_exist_file):
+        """
+        Determines the XML file path based on parameters.
+
+        Returns:
+            File path string, or False if download failed.
+        """
+        if from_exist_file is not None:
+            week_num_force_to_file_name = str(week_num_force).zfill(2)
+            file = "/home/frettie/" + str(year_num_force) + '-wnew_m_' + week_num_force_to_file_name + '.xml'
+            if (os.getcwd() == '/Users/jirisedlacek/htdocs/vkol'):
+                file = "/Users/jirisedlacek/htdocs/vkol/" + str(year_num_force) + '-wnew_m_' + week_num_force_to_file_name + '.xml'
+            return file
+        else:
+            return nkcrlib.download_actual_file_from_nkcr(week_num_force)
+
+    def _build_wiki_table(self, week_num):
+        """
+        Creates a WikiTable from self.table data, filters out 'aun'/'kon' records,
+        and returns the rendered wikitext.
+
+        Args:
+            week_num: The week number for the table caption.
+
+        Returns:
+            Rendered wiki table string.
+        """
+        wt = WikiTable()
+        wt.set_caption(str(week_num) + '. týden')
+        wt.set_week_num(int(week_num))
+        wt.set_year(int(self.year))
+        wt.add_header_column('NKČR')
+        wt.add_header_column('Jméno')
+        wt.add_header_column('Narození')
+        wt.add_header_column('Úmrtí')
+        wt.add_header_column('Popis')
+        wt.add_header_column('QID z VIAF')
+        wt.add_header_column('Akce')
+
+        pattern = re.compile(r'aun|kon')
+        for l in self.table:
+            if not pattern.findall(str(l['nkcr_aut'])):
+                wt.add_line(l.values())
+
+        for lin in self.quick_lines:
+            print(lin)
+
+        return wt.render()
+
+    def _build_main_page_text(self, week_num, exist_weeks):
+        """
+        Generates the main page wikitext with links to all existing week pages.
+
+        Args:
+            week_num: The current week number.
+            exist_weeks: List of dicts with 'year' and 'week' keys.
+
+        Returns:
+            Main page wikitext string.
+        """
+        weeks_by_year = defaultdict(list)
+        for week in exist_weeks:
+            weeks_by_year[week['year']].append(week)
+
+        older_weeks_list = ''
+        for year, weeks in sorted(weeks_by_year.items(), reverse=True):
+            older_weeks_list += f"\n'''{year}'''\n"
+            older_weeks_list += "{{Div col|colwidth=10em}}\n"
+            for exist_week in sorted(weeks, key=lambda x: int(x['week'])):
+                older_weeks_list += f"* [[/{year}/{exist_week['week']}|{exist_week['week']}. týden]]\n"
+            older_weeks_list += "{{Div col end}}\n"
+
+        actual_link = "{{/" + str(self.year) + '/' + str(week_num) + "}}"
+        text_main_page = """Nové záznamy v databázi autorit NKČR
+
+== Nejnovější týden (""" + str(week_num) + """) ==
+""" + actual_link + """
+
+== Starší ==
+""" + older_weeks_list
+
+        return text_main_page
+
     def save_page(self, week_num, table, quiet = False):
         site = pywikibot.Site('wikidata', 'wikidata')
-
-        header_text = "'''Nové záznamy v databázi autorit NKČR za " + str(week_num) + ". týden roku " + self.year + ".'''"
 
         try:
             page = pywikibot.Page(site, 'Wikidata:WikiProject Czech Republic/New authorities/' + self.year + '/' + str(week_num))
             page.text = table
             page.save(quiet=quiet)
-            if (self.update_main_page == True):
+            if self.update_main_page:
                 exist_weeks = self.get_exist_pages(site)
-                
-                weeks_by_year = defaultdict(list)
-                for week in exist_weeks:
-                    weeks_by_year[week['year']].append(week)
-
-                older_weeks_list = ''
-                for year, weeks in sorted(weeks_by_year.items(), reverse=True):
-                    older_weeks_list += f"\n'''{year}'''\n"
-                    older_weeks_list += "{{Div col|colwidth=10em}}\n"
-                    for exist_week in sorted(weeks, key=lambda x: int(x['week'])):
-                        older_weeks_list += f"* [[/{year}/{exist_week['week']}|{exist_week['week']}. týden]]\n"
-                    older_weeks_list += "{{Div col end}}\n"
-
-                year = self.year
-                actual_link = "{{/" + str(year) + '/' + str(week_num) + "}}"
-                text_main_page = """Nové záznamy v databázi autorit NKČR
-            
-== Nejnovější týden (""" + str(week_num) + """) ==
-""" + actual_link + """
-            
-== Starší ==
-""" + older_weeks_list
-            
-
+                text_main_page = self._build_main_page_text(week_num, exist_weeks)
 
                 page = pywikibot.Page(pywikibot.Site('wikidata', fam='wikidata'), 'Wikidata:WikiProject Czech Republic/New authorities')
                 page.text = text_main_page
                 page.save(quiet=quiet)
-            else:
-                pass
-                # print('No save main page! It is ok!')
         except pywikibot.exceptions.NoPageError:
             print('No page:' + 'Wikidata:WikiProject Czech Republic/New authorities')
-            pass
 
     def get_exist_pages(self, site):
 
@@ -173,14 +189,12 @@ class create_table:
 
         for year in years:
             for week in weeks:
-                # print(week)
                 try:
                     page = pywikibot.Page(site, 'Wikidata:WikiProject Czech Republic/New authorities/' + str(year) + '/' + str(week))
                     page.get()
                     wk = {'week' : week, 'year' : year}
                     exist_weeks.append(wk)
                 except pywikibot.exceptions.NoPageError:
-                    # print('No page: ' + 'Wikipedista:Frettie/nkcr_table/' + str(week))
                     pass
         return exist_weeks
 
@@ -195,7 +209,6 @@ class create_table:
                     prepared.append(wk)
 
         if (len(prepared) < OLDER_UPDATER_PAGE_COUNT):
-            # get older
             for wk in exist_pages:
                 if (len(prepared) < OLDER_UPDATER_PAGE_COUNT):
                     if (int(wk['year']) == actual_year - 1):
@@ -208,8 +221,6 @@ class create_table:
         for i in range(5):
             try:
                 response = requests.get(hub_link)
-                if str(nkcr_aut) == 'hka20251281612':
-                    stop = 'here'
                 if response.status_code == 200:
                     json_record = response.text
                     data_record = json.loads(json_record)
@@ -249,10 +260,7 @@ class create_table:
             return None
 
     def get_qid_by_wiki(self, project, article):
-        property = 'viaf'
-
         try:
-            #/enwiki:DIY?site=wikidata
             query = project + 'wiki:' + article + '?site=wikidata'
             hub_link = "https://hub.toolforge.org/" + query + "&format=json"
             response = requests.get(hub_link)
@@ -260,7 +268,6 @@ class create_table:
                 json_record = response.text
                 data_record = json.loads(json_record)
                 wd_record = data_record['destination']['preferedSitelink']['title']
-                # print('qid by wikilink found: ' + 'found')
                 return wd_record
             else:
                 return None
@@ -276,73 +283,22 @@ class create_table:
             viaf_url = response.next.url
             splitted = viaf_url.split('/')
             viaf_id = splitted[-1]
-            # print('viaf found: ' + str(nkcr_aut))
             return self.get_qid_by_viaf_id(viaf_id)
         except (KeyError, TypeError, AttributeError):
             return None
 
     def run(self, week_num_force = None, year_num_force = None, quiet = False, from_exist_file = None):
+        file = self._resolve_file_path(week_num_force, year_num_force, from_exist_file)
 
-        if (from_exist_file is not None):
-            week_num_force_to_file_name = str(week_num_force).zfill(2)
-            file = "/home/frettie/" + str(year_num_force) + '-wnew_m_' + week_num_force_to_file_name + '.xml'
-            if (os.getcwd() == '/Users/jirisedlacek/htdocs/vkol'):
-                file = "/Users/jirisedlacek/htdocs/vkol/" + str(year_num_force) + '-wnew_m_' + week_num_force_to_file_name + '.xml'
-        else:
-            file = nkcrlib.download_actual_file_from_nkcr(week_num_force)
-        # file = "2022-wnew_m_17.xml"
-        if (file is not False):
-
+        if file is not False:
             self.load_to_table(file_name=file)
-            wt = WikiTable()
+
             week_num = nkcrlib.get_week_num_to_download(week_num_force)
             if year_num_force is None:
                 spl = file.split('-')
                 self.year = spl[0]
             else:
                 self.year = str(year_num_force)
-            wt.set_caption(str(week_num) + '. týden')
-            wt.set_week_num(int(week_num))
-            wt.set_year(int(self.year))
-            wt.add_header_column('NKČR')
-            wt.add_header_column('Jméno')
-            # wt.add_header_column('Křestní jméno')
-            # wt.add_header_column('Příjmení')
-            wt.add_header_column('Narození')
-            wt.add_header_column('Úmrtí')
-            wt.add_header_column('Popis')
-            # wt.add_header_column('Narození z popisu')
-            # wt.add_header_column('Úmrtí z popisu')
-            # wt.add_header_column('ORCID')
-            # wt.add_header_column('WD z NKČR')
-            # wt.add_header_column('jazyk wiki z NKCR')
-            # wt.add_header_column('článek wiki z NKCR')
-            # wt.add_header_column('wikiprojekt z NKCR')
-            # wt.add_header_column('Wikilink z NKCR')
-            wt.add_header_column('QID z VIAF')
-            wt.add_header_column('Akce')
 
-            for l in self.table:
-                # print(l.items())
-                pattern = re.compile(r'aun|kon')
-                if not pattern.findall(str(l['nkcr_aut'])):
-                    # if not self.already_filled_in_wikidata(l['nkcr_aut']):
-                    wt.add_line(l.values())
-                    # else:
-                    #     print('filled_already: ' + str(l['name']))
-                else:
-                    pass
-                    # print('aun or kon record deleted: ' + str(l['nkcr_aut']))
-
-            for lin in self.quick_lines:
-                print(lin)
-
-            printed_table = wt.render()
+            printed_table = self._build_wiki_table(week_num)
             self.save_page(week_num, printed_table, quiet)
-
-    def __init__(self):
-        pass
-        # print('run create table!')
-
-# cr = create_table()
-# cr.run(WEEK_NUM_CONST)

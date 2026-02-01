@@ -1,4 +1,3 @@
-# import MySQLdb
 from autxmlhandler import AutXmlHandler
 from pymarc.marcxml import parse_xml
 import datetime
@@ -7,6 +6,7 @@ from quickstatements import quickstatements
 write_allowed = False
 
 def get_nkcr_aut_in_db(new_only = False, column_to_return = [], withoutEmptyNames = True, typeOfReturn = 'set', limit = None, index_column = None):
+    import MySQLdb
 
     db = MySQLdb.connect(host="localhost",
                          user="root",
@@ -51,8 +51,6 @@ def get_nkcr_aut_in_db(new_only = False, column_to_return = [], withoutEmptyName
         if (typeOfReturn == 'list'):
             data.append(retline)
             indexes.append(index_data)
-
-
         else:
             dataFinal.add(retline)
 
@@ -93,7 +91,9 @@ def get_week_num_to_download(force_week = None):
         if (actual_week_num == 1):
             week_num_to_download = 51
     elif year == 2026:
-        week_num_to_download = actual_week_num - 1
+        week_num_to_download = actual_week_num - 2
+        if (actual_week_num == 1):
+            week_num_to_download = 51
     else:
         week_num_to_download = actual_week_num - 1
         if (week_num_to_download == 0):
@@ -101,7 +101,6 @@ def get_week_num_to_download(force_week = None):
     return week_num_to_download
 
 def get_year_actual():
-
     actual_week_num_obj = datetime.datetime.now()
     actual_week_num = actual_week_num_obj.isocalendar()[1]
     year = actual_week_num_obj.year
@@ -120,20 +119,8 @@ def download_actual_file_from_nkcr(force = None):
     with ftputil.FTPHost("ftp.nkp.cz", "wikimedia", "wikid4t4369") as ftp_host:
         names = ftp_host.listdir(ftp_host.curdir)
         for name in names:
-            # regex = r"wnew_m_(\d+)\.xml"
-            # matches = re.search(regex, name, re.IGNORECASE)
-            # try:
-            #     groups = matches.groups()
-            #     week_num = groups[0]
-            #     print(name)
-            #     print(week_num)
-            # except AttributeError as e:
-            #     week_num = 0
             week_num_to_download = str(week_num_to_download).zfill(2)
-            # print(name)
             file_name_to_download = 'wnew_m_' + week_num_to_download + '.xml'
-            # print(file_name_to_download)
-            # print(name)
             if (name == file_name_to_download):
                 if ftp_host.path.isfile(name):
                     info = ftp_host.stat(name)
@@ -147,24 +134,16 @@ def download_actual_file_from_nkcr(force = None):
 
 def resolve_death_from_note(record):
     try:
-        # death_from_note = str(record.death_date().year) + '-' + str(record.death_date().month) + '-' + str(
-        #     record.death_date().day) + ' ' + str(record.death_date().hour) + ':' + str(
-        #     record.death_date().minute) + ':' + str(record.death_date().second)
         death_from_note = record.death_date()
     except AttributeError:
         death_from_note = None
-
     return death_from_note
 
 def resolve_birth_from_note(record):
     try:
-        # birth_from_note = str(record.birth_date().year) + '-' + str(record.birth_date().month) + '-' + str(
-        #     record.birth_date().day) + ' ' + str(record.birth_date().hour) + ':' + str(
-        #     record.birth_date().minute) + ':' + str(record.birth_date().second)
         birth_from_note = record.birth_date()
     except AttributeError:
         birth_from_note = None
-
     return birth_from_note
 
 def create_search_link(name):
@@ -192,8 +171,6 @@ def create_quickstatements_link(record_in_nkcr, force_qid = None, quickstatement
         which_wd_item = link.LAST_DEFINE
         link.create()
 
-
-    link.set_record(record_in_nkcr)
     link.set_item_to_add(which_wd_item)
     if create_new:
         try:
@@ -202,8 +179,6 @@ def create_quickstatements_link(record_in_nkcr, force_qid = None, quickstatement
             link.set_label(record_in_nkcr.first_name + " " + record_in_nkcr.last_name, 'de')
         except TypeError:
             link.set_label(record_in_nkcr.name)
-            # link.set_label(record_in_nkcr.name, 'en')
-            # link.set_label(record_in_nkcr.name, 'de')
         if (record_in_nkcr.human):
             link.set_gender(record_in_nkcr.aut, record_in_nkcr.name, record_in_nkcr.gender)
             link.set_human(record_in_nkcr.aut, record_in_nkcr.name, record_in_nkcr.human)
@@ -221,7 +196,6 @@ def create_quickstatements_link(record_in_nkcr, force_qid = None, quickstatement
     link.set_date(record_in_nkcr.aut, link.BIRTH, record_in_nkcr.birth_to_quickstatements)
     link.set_date(record_in_nkcr.aut, link.DEATH, record_in_nkcr.death_to_quickstatements)
 
-    get_link = link.get_link()
     if (quickstatement_line_only):
         return link.get_line()
     if (record_in_nkcr.wikidata_from_nkcr is not None):

@@ -2,48 +2,8 @@ from autrecord import AutRecord
 import nkcrlib
 from datetime import datetime
 import re
-from quickstatements import quickstatements
 
 class nkcr_record:
-    record = None
-
-    aut = ''
-    birth_wd = ''
-    death_wd = ''
-    birth_note_precision = '0'
-    death_note_precision = '0'
-    updated = ''
-    updatedraw = ''
-    death_from_note = ''
-    birth_from_note = ''
-    new = 1
-    type = 1
-    name = ''
-    first_name = ''
-    wikidata_field = ''
-    orcid_field = ''
-    wikipedia_field = ''
-    wikidata_source_field = ''
-    wikipedia_source_field = ''
-    last_name = ''
-    birth = ''
-    death = ''
-    description = ''
-    status = ''
-    county = ''
-    city = ''
-
-    gender = ""
-    human = False
-
-    wikidata_from_nkcr = ''
-    wikiproject_from_nkcr = ''
-    wikilang_from_nkcr = ''
-    wikiarticle_from_nkcr = ''
-    wikilink_from_nkcr = ''
-
-    birth_to_quickstatements = ''
-    death_to_quickstatements = ''
 
     def __init__(self, record):
         assert isinstance(record, AutRecord)
@@ -68,8 +28,23 @@ class nkcr_record:
         self.county = record.okres()
         self.city = record.mesto()
         self.gender = record.gender()
-        if (self.gender is not None):
-            self.human = True
+        self.human = self.gender is not None
+
+        self.birth_wd = ''
+        self.death_wd = ''
+        self.birth_note_precision = '0'
+        self.death_note_precision = '0'
+        self.new = 1
+        self.type = 1
+
+        self.wikidata_from_nkcr = None
+        self.wikiproject_from_nkcr = ''
+        self.wikilang_from_nkcr = ''
+        self.wikiarticle_from_nkcr = ''
+        self.wikilink_from_nkcr = ''
+
+        self.birth_to_quickstatements = None
+        self.death_to_quickstatements = None
 
         self.get_updated_time()
         self.resolve_wikidata_from_nkcr()
@@ -118,24 +93,9 @@ class nkcr_record:
             try:
                 groups = matches.groups()
                 self.county = groups[0]
-            except AttributeError as e:
+            except AttributeError:
                 self.county = ""
 
     def resolve_quickstatements_dates(self):
-        self.birth_to_quickstatements = None
-        if (self.birth_from_note is None):
-            if (self.birth is None):
-                self.birth_to_quickstatements = None
-            else:
-                self.birth_to_quickstatements = self.birth
-        else:
-            self.birth_to_quickstatements = self.birth_from_note
-
-        self.death_to_quickstatements = None
-        if (self.death_from_note is None):
-            if (self.death is None):
-                self.death_to_quickstatements = None
-            else:
-                self.death_to_quickstatements = self.death
-        else:
-            self.death_to_quickstatements = self.death_from_note
+        self.birth_to_quickstatements = self.birth_from_note if self.birth_from_note is not None else self.birth
+        self.death_to_quickstatements = self.death_from_note if self.death_from_note is not None else self.death

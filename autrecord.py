@@ -1,7 +1,7 @@
 from pymarc import Record
 import re
 import datetime
-from typing import Optional, Dict, Any, List
+from typing import Optional, Dict, List
 
 
 class AutRecord(Record):
@@ -9,6 +9,12 @@ class AutRecord(Record):
     A subclass of pymarc.Record to provide methods for accessing specific
     fields in an authority record.
     """
+
+    CZECH_MONTH_MAPPING = {
+        ' ledna': '.1.', ' února': '.2.', ' března': '.3.', ' dubna': '.4.',
+        ' května': '.5.', ' června': '.6.', ' července': '.7.', ' srpna': '.8.',
+        ' září': '.9.', ' října': '.10.', ' listopadu': '.11.', ' prosince': '.12.'
+    }
 
     def name(self) -> Optional[str]:
         """
@@ -33,10 +39,8 @@ class AutRecord(Record):
 
     def aliases(self) -> Optional[List[str]]:
         """
-        Returns the name of the record from various fields.
-        Searches fields 400 for the alias.
+        Returns aliases from field 400.
         """
-        start = ''
         aliases = []
         for tag in self.get_fields('400'):
             if 'a' in tag:
@@ -44,23 +48,12 @@ class AutRecord(Record):
                 if alias:
                     if alias.endswith(','):
                         alias = alias[:-1]
-                    # Pokud má alias čárku, otočit pořadí slov
                     if ',' in alias:
                         parts = alias.split(',', 1)
-                        if len(parts) == 2 or len(parts) == 3 or len(parts) == 4:
+                        if len(parts) >= 2:
                             alias = parts[1].strip() + ' ' + parts[0].strip()
-
                     aliases.append(alias)
-            # if 't' in tag:
-            #     alias = tag['t']
-            #     if alias:
-            #         # Pokud má alias čárku, otočit pořadí slov
-            #         if ',' in alias:
-            #             parts = alias.split(',', 1)
-            #             if len(parts) == 2 or len(parts) == 3 or len(parts) == 4:
-            #                 alias = parts[1].strip() + ' ' + parts[0].strip()
-            #         aliases.append(alias)
-        if (len(aliases) > 0):
+        if len(aliases) > 0:
             return aliases
         return None
 
@@ -151,51 +144,46 @@ class AutRecord(Record):
                     }
         return None
 
-    def birth_date(self) -> Optional[datetime.datetime]:
+    def _parse_date_from_note(self, pattern: str) -> Optional[datetime.datetime]:
         """
-        Parses the birth date from the note field (678).
-        """
-        if str(self.aut()) == 'hka20251281612':
-            stop = 'here'
-        note = self.note()
-        if not note:
-            return None
+        Parses a date from the note field (678) using the given regex pattern.
 
-        mapping = {' ledna': '.1.', ' února': '.2.', ' března': '.3.', ' dubna': '.4.',
-                   ' května': '.5.', ' června': '.6.', ' července': '.7.', ' srpna': '.8.',
-                   ' září': '.9.', ' října': '.10.', ' listopadu': '.11.', ' prosince': '.12.'}
-        for k, v in mapping.items():
-            note = note.replace(k, v)
+        Args:
+            pattern: Regex pattern with 3 groups (day, month, year).
 
-        match = re.search(r"(?:Narozen|Narozena|narozen|narozena)\s*(\d+)\.\s*(\d+)\.\s*(\d+)", note, re.IGNORECASE)
-        if match:
-            try:
-                    return datetime.datetime(int(match.group(3)), int(match.group(2)), int(match.group(1)))
-            except ValueError:
-                return None
-        return None
-
-    def death_date(self) -> Optional[datetime.datetime]:
-        """
-        Parses the death date from the note field (678).
+        Returns:
+            A datetime object or None.
         """
         note = self.note()
         if not note:
             return None
 
-        mapping = {' ledna': '.1.', ' února': '.2.', ' března': '.3.', ' dubna': '.4.',
-                   ' května': '.5.', ' června': '.6.', ' července': '.7.', ' srpna': '.8.',
-                   ' září': '.9.', ' října': '.10.', ' listopadu': '.11.', ' prosince': '.12.'}
-        for k, v in mapping.items():
+        for k, v in self.CZECH_MONTH_MAPPING.items():
             note = note.replace(k, v)
 
-        match = re.search(r"(?:Zemřel|Zemřela|zemřel|zemřela)\s*(\d+)\.\s*(\d+)\.\s*(\d+)", note, re.IGNORECASE)
+        match = re.search(pattern, note, re.IGNORECASE)
         if match:
             try:
                 return datetime.datetime(int(match.group(3)), int(match.group(2)), int(match.group(1)))
             except ValueError:
                 return None
         return None
+
+    def birth_date(self) -> Optional[datetime.datetime]:
+        """
+        Parses the birth date from the note field (678).
+        """
+        return self._parse_date_from_note(
+            r"(?:Narozen|Narozena|narozen|narozena)\s*(\d+)\.\s*(\d+)\.\s*(\d+)"
+        )
+
+    def death_date(self) -> Optional[datetime.datetime]:
+        """
+        Parses the death date from the note field (678).
+        """
+        return self._parse_date_from_note(
+            r"(?:Zemřel|Zemřela|zemřel|zemřela)\s*(\d+)\.\s*(\d+)\.\s*(\d+)"
+        )
 
     def first_name(self) -> Optional[str]:
         """

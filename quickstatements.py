@@ -11,10 +11,6 @@ class quickstatements:
     dates (birth/death), NKCR authority IDs, gender, and human instance.
     """
 
-    quickstatements_command: List[str] = []
-    record: Optional[str] = None
-    which_item: str = ""
-
     QUICKSTATEMENTS_LINK: str = 'https://tools.wmflabs.org/quickstatements/#v1='
 
     END_LINE: str = '||'
@@ -28,6 +24,10 @@ class quickstatements:
 
     BIRTH: str = 'BIRTH'
     DEATH: str = 'DEATH'
+
+    def __init__(self) -> None:
+        self.quickstatements_command: List[str] = []
+        self.which_item: str = ""
 
     def reset(self) -> None:
         """
@@ -50,14 +50,14 @@ class quickstatements:
         """
         self.add_command(self.CREATE_DEFINE + self.END_LINE)
 
-    def set_record(self, record: str) -> None:
+    def set_record(self, record) -> None:
         """
-        Sets a record identifier. (Currently not directly used in command generation).
+        Sets a record identifier. Kept for backward compatibility.
 
         Args:
             record: The record identifier.
         """
-        self.record = record
+        pass
 
     def set_item_to_add(self, which_item: str) -> None:
         """
@@ -96,11 +96,10 @@ class quickstatements:
 
     def set_aliases(self, aliases) -> None:
         """
-        Sets an alias for the current item in a specified language.
+        Sets aliases for the current item.
 
         Args:
-            value: The alias string.
-            lang: The language code (e.g., 'cs', 'en'). Defaults to 'cs'.
+            aliases: Iterable of alias strings.
         """
         if (aliases is not None):
             for alias in aliases:
@@ -143,6 +142,25 @@ class quickstatements:
         line = ''.join(self.quickstatements_command)
         return line
 
+    def _reference_suffix(self, nkcr_aut: str) -> str:
+        """
+        Builds the common reference suffix (S248/Q13550863/S691/nkcr_aut/S813/timestamp)
+        used in multiple set_* methods.
+
+        Args:
+            nkcr_aut: The NKCR authority ID.
+
+        Returns:
+            The reference suffix string.
+        """
+        nkcr_aut_enclosed = self.ENCLOSURE + nkcr_aut + self.ENCLOSURE
+        dt_string = self.now_time()
+        return (
+            f"S248{self.SEPARATOR}Q13550863{self.SEPARATOR}"
+            f"S691{self.SEPARATOR}{nkcr_aut_enclosed}{self.SEPARATOR}"
+            f"S813{self.SEPARATOR}{dt_string}{self.END_LINE}"
+        )
+
     def set_date(self, nkcr_aut: str, birth_or_death: str, value: Optional[Union[int, datetime]]) -> None:
         """
         Sets a birth (P569) or death (P570) date for the current item.
@@ -163,9 +181,6 @@ class quickstatements:
         if value is None:
             return None
 
-        nkcr_aut_enclosed = self.ENCLOSURE + nkcr_aut + self.ENCLOSURE
-        now_dt_string = self.now_time()
-
         dt_string: str = ''
         if len(str(value)) == 4:
             precision = '9'  # Year precision
@@ -182,10 +197,10 @@ class quickstatements:
                 dt_string = ''
 
         if dt_string:
+            ref = self._reference_suffix(nkcr_aut)
             cmd = (
                 f"{self.which_item}{self.SEPARATOR}{prop}{self.SEPARATOR}{dt_string}{self.SEPARATOR}"
-                f"S248{self.SEPARATOR}Q13550863{self.SEPARATOR}S691{self.SEPARATOR}{nkcr_aut_enclosed}{self.SEPARATOR}"
-                f"S813{self.SEPARATOR}{now_dt_string}{self.END_LINE}"
+                f"{ref}"
             )
             self.add_command(cmd)
 
@@ -216,12 +231,11 @@ class quickstatements:
         except TypeError:
             name_in_nkcr_enclosed = ''
 
-        dt_string = self.now_time()
+        ref = self._reference_suffix(nkcr_aut)
         cmd = (
             f"{self.which_item}{self.SEPARATOR}P691{self.SEPARATOR}{nkcr_aut_enclosed}{self.SEPARATOR}"
             f"P1810{self.SEPARATOR}{name_in_nkcr_enclosed}{self.SEPARATOR}"
-            f"S248{self.SEPARATOR}Q13550863{self.SEPARATOR}S691{self.SEPARATOR}{nkcr_aut_enclosed}{self.SEPARATOR}"
-            f"S813{self.SEPARATOR}{dt_string}{self.END_LINE}"
+            f"{ref}"
         )
         self.add_command(cmd)
 
@@ -232,16 +246,9 @@ class quickstatements:
 
         Args:
             nkcr_aut: The NKCR authority ID.
-            name_in_nkcr: The name string as it appears in NKCR (used for reference, not directly in statement).
+            name_in_nkcr: Kept for backward compatibility.
             gender: 'man' or 'woman'.
         """
-        nkcr_aut_enclosed = self.ENCLOSURE + nkcr_aut + self.ENCLOSURE
-        try:
-            # name_in_nkcr is not directly used in the command, but kept for consistency with other methods
-            _ = self.ENCLOSURE + name_in_nkcr + self.ENCLOSURE
-        except TypeError:
-            _ = ''
-
         gender_qid: Optional[str] = None
         try:
             if gender == 'man':
@@ -252,11 +259,10 @@ class quickstatements:
             pass
 
         if gender_qid:
-            dt_string = self.now_time()
+            ref = self._reference_suffix(nkcr_aut)
             cmd = (
                 f"{self.which_item}{self.SEPARATOR}P21{self.SEPARATOR}{gender_qid}{self.SEPARATOR}"
-                f"S248{self.SEPARATOR}Q13550863{self.SEPARATOR}S691{self.SEPARATOR}{nkcr_aut_enclosed}{self.SEPARATOR}"
-                f"S813{self.SEPARATOR}{dt_string}{self.END_LINE}"
+                f"{ref}"
             )
             self.add_command(cmd)
 
@@ -267,16 +273,9 @@ class quickstatements:
 
         Args:
             nkcr_aut: The NKCR authority ID.
-            name_in_nkcr: The name string as it appears in NKCR (used for reference, not directly in statement).
+            name_in_nkcr: Kept for backward compatibility.
             human: Boolean, should be True to set as human.
         """
-        nkcr_aut_enclosed = self.ENCLOSURE + nkcr_aut + self.ENCLOSURE
-        try:
-            # name_in_nkcr is not directly used in the command, but kept for consistency with other methods
-            _ = self.ENCLOSURE + name_in_nkcr + self.ENCLOSURE
-        except TypeError:
-            _ = ''
-
         human_qid: Optional[str] = None
         try:
             if human:
@@ -285,10 +284,9 @@ class quickstatements:
             pass
 
         if human_qid:
-            dt_string = self.now_time()
+            ref = self._reference_suffix(nkcr_aut)
             cmd = (
                 f"{self.which_item}{self.SEPARATOR}P31{self.SEPARATOR}{human_qid}{self.SEPARATOR}"
-                f"S248{self.SEPARATOR}Q13550863{self.SEPARATOR}S691{self.SEPARATOR}{nkcr_aut_enclosed}{self.SEPARATOR}"
-                f"S813{self.SEPARATOR}{dt_string}{self.END_LINE}"
+                f"{ref}"
             )
             self.add_command(cmd)
