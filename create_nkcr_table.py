@@ -216,27 +216,27 @@ class create_table:
         return prepared
 
     def already_filled_in_wikidata(self, nkcr_aut=''):
-        PROPERTY = 'P691'
-        hub_link = "https://hub.toolforge.org/" + PROPERTY + ":" + str(nkcr_aut) + "?format=json"
+        sparql_url = "https://query-main.wikidata.org/sparql"
+        query = 'SELECT ?item WHERE { ?item wdt:P691 "' + str(nkcr_aut) + '" . }'
+        headers = {
+            'Accept': 'application/sparql-results+json',
+            'User-Agent': 'VKOLbot/1.0 (jirisedlacek@gmail.com)'
+        }
         for i in range(5):
             try:
-                response = requests.get(hub_link)
+                response = requests.get(sparql_url, params={'query': query}, headers=headers, timeout=30)
                 if response.status_code == 200:
-                    json_record = response.text
-                    data_record = json.loads(json_record)
-                    wd_record = data_record['origin']['qid']
-                    return True
-
-                if response.status_code != 404:
-                    return False  # fail fast on other errors
-
-                # It is a 404. Let's check if we should retry.
+                    data = response.json()
+                    return len(data['results']['bindings']) > 0
+                if response.status_code == 429:
+                    retry_after = int(response.headers.get('Retry-After', 60))
+                    time.sleep(retry_after)
+                    continue
                 if i < 4:
-                     time.sleep(2)
-
+                    time.sleep(5)
             except (KeyError, TypeError, requests.exceptions.RequestException, json.decoder.JSONDecodeError):
                 if i < 4:
-                    time.sleep(2)
+                    time.sleep(5)
                 else:
                     return False
         return False
