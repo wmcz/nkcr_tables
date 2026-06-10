@@ -3,6 +3,7 @@ import os
 import re
 import time
 from collections import defaultdict
+from urllib.parse import quote, unquote
 
 import requests
 
@@ -159,19 +160,28 @@ class create_table:
     def save_page(self, week_num, table, quiet = False):
         site = pywikibot.Site('wikidata', 'wikidata')
 
-        try:
-            page = pywikibot.Page(site, 'Wikidata:WikiProject Czech Republic/New authorities/' + self.year + '/' + str(week_num))
-            page.text = table
-            page.save(quiet=quiet)
-            if self.update_main_page:
-                exist_weeks = self.get_exist_pages(site)
-                text_main_page = self._build_main_page_text(week_num, exist_weeks)
-
-                page = pywikibot.Page(pywikibot.Site('wikidata', fam='wikidata'), 'Wikidata:WikiProject Czech Republic/New authorities')
-                page.text = text_main_page
+        for attempt in range(5):
+            try:
+                page = pywikibot.Page(site, 'Wikidata:WikiProject Czech Republic/New authorities/' + self.year + '/' + str(week_num))
+                page.text = table
                 page.save(quiet=quiet)
-        except pywikibot.exceptions.NoPageError:
-            print('No page:' + 'Wikidata:WikiProject Czech Republic/New authorities')
+                if self.update_main_page:
+                    exist_weeks = self.get_exist_pages(site)
+                    text_main_page = self._build_main_page_text(week_num, exist_weeks)
+
+                    page = pywikibot.Page(pywikibot.Site('wikidata', fam='wikidata'), 'Wikidata:WikiProject Czech Republic/New authorities')
+                    page.text = text_main_page
+                    page.save(quiet=quiet)
+                return
+            except pywikibot.exceptions.NoPageError:
+                print('No page:' + 'Wikidata:WikiProject Czech Republic/New authorities')
+                return
+            except pywikibot.exceptions.MaxlagTimeoutError:
+                if attempt < 4:
+                    print(f'MaxlagTimeoutError při ukládání, čekám 120s (pokus {attempt + 1}/5)')
+                    time.sleep(120)
+                else:
+                    print('MaxlagTimeoutError: všechny pokusy selhaly, stránka nebyla uložena')
 
     def get_exist_pages(self, site):
 
@@ -260,19 +270,77 @@ class create_table:
             return None
 
     def get_qid_by_wiki(self, project, article):
-        try:
-            query = project + 'wiki:' + article + '?site=wikidata'
-            hub_link = "https://hub.toolforge.org/" + query + "&format=json"
-            response = requests.get(hub_link)
-            if response.status_code == 200:
-                json_record = response.text
-                data_record = json.loads(json_record)
-                wd_record = data_record['destination']['preferedSitelink']['title']
-                return wd_record
-            else:
-                return None
-        except (KeyError, TypeError, json.decoder.JSONDecodeError, requests.exceptions.ConnectionError):
-            return None
+        # `project` je jazykovy kod wiki (napr. "ca"), `article` muze prijit
+        # percent-enkodovany z pole 856 $u (napr. "Antoni_Gaud%C3%AD").
+        title = unquote(str(article)).replace('_', ' ')
+        qid = self._qid_from_mediawiki(project, title)
+        if qid is not None:
+            return qid
+        return self._qid_from_hub(project, title)
+
+    def _qid_from_mediawiki(self, lang, title):
+        """Primarni reseni QID clanku pres first-party MediaWiki API (pageprops -> wikibase_item)."""
+        api = "https://" + str(lang) + ".wikipedia.org/w/api.php"
+        params = {
+            'action': 'query', 'prop': 'pageprops', 'ppprop': 'wikibase_item',
+            'titles': title, 'redirects': 1, 'format': 'json'
+        }
+        headers = {
+            'Accept': 'application/json',
+            'User-Agent': 'VKOLbot/1.0 (jirisedlacek@gmail.com)'
+        }
+        for i in range(5):
+            try:
+                response = requests.get(api, params=params, headers=headers, timeout=30)
+                if response.status_code == 200:
+                    pages = response.json().get('query', {}).get('pages', {})
+                    for page in pages.values():
+                        wikibase_item = page.get('pageprops', {}).get('wikibase_item')
+                        if wikibase_item:
+                            return wikibase_item
+                    return None
+                if response.status_code == 429:
+                    retry_after = int(response.headers.get('Retry-After', 60))
+                    time.sleep(retry_after)
+                    continue
+                if i < 4:
+                    time.sleep(5)
+            except (KeyError, TypeError, requests.exceptions.RequestException, json.decoder.JSONDecodeError):
+                if i < 4:
+                    time.sleep(5)
+                else:
+                    return None
+        return None
+
+    def _qid_from_hub(self, lang, title):
+        """Fallback: reseni QID pres hub.toolforge.org."""
+        identifier = str(lang) + "wiki:" + title.replace(' ', '_')
+        url = "https://hub.toolforge.org/" + quote(identifier, safe=":")
+        params = {'site': 'wikidata', 'format': 'json'}
+        headers = {
+            'Accept': 'application/json',
+            'User-Agent': 'VKOLbot/1.0 (jirisedlacek@gmail.com)'
+        }
+        for i in range(5):
+            try:
+                response = requests.get(url, params=params, headers=headers, timeout=30)
+                if response.status_code == 200:
+                    try:
+                        return response.json()['destination']['preferedSitelink']['title']
+                    except (KeyError, TypeError, json.decoder.JSONDecodeError):
+                        return None
+                if response.status_code == 429:
+                    retry_after = int(response.headers.get('Retry-After', 60))
+                    time.sleep(retry_after)
+                    continue
+                if i < 4:
+                    time.sleep(5)
+            except (KeyError, TypeError, requests.exceptions.RequestException, json.decoder.JSONDecodeError):
+                if i < 4:
+                    time.sleep(5)
+                else:
+                    return None
+        return None
 
 
     def find_on_viaf(self, nkcr_aut=''):
