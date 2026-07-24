@@ -1,6 +1,8 @@
 from autxmlhandler import AutXmlHandler
 from pymarc.marcxml import parse_xml
 import datetime
+import json
+import requests
 from quickstatements import quickstatements
 
 write_allowed = False
@@ -158,6 +160,41 @@ def create_nkcr_link(nkcr_aut):
     link = ' ([https://aleph.nkp.cz/F/?func=find-c&local_base=aut&ccl_term=ica=' + nkcr_aut + ' ' + nkcr_aut + '])'
     return link
 
+_missing_cs_terms_cache = {}
+
+def get_missing_cs_terms(qid):
+    """
+    Zjisti pres Wikidata API, zda polozce chybi cesky label a cesky popis.
+    Pri chybe API vraci False/False, aby se existujici udaje neprepisovaly.
+    """
+    if qid in _missing_cs_terms_cache:
+        return _missing_cs_terms_cache[qid]
+    missing = {'label': False, 'description': False}
+    params = {
+        'action': 'wbgetentities', 'ids': qid,
+        'props': 'labels|descriptions', 'languages': 'cs', 'format': 'json'
+    }
+    headers = {'User-Agent': 'VKOLbot/1.0 (jirisedlacek@gmail.com)'}
+    try:
+        response = requests.get('https://www.wikidata.org/w/api.php', params=params, headers=headers, timeout=30)
+        if response.status_code == 200:
+            entity = response.json()['entities'][qid]
+            missing['label'] = 'cs' not in entity.get('labels', {})
+            missing['description'] = 'cs' not in entity.get('descriptions', {})
+            _missing_cs_terms_cache[qid] = missing
+    except (KeyError, TypeError, requests.exceptions.RequestException, json.decoder.JSONDecodeError):
+        pass
+    return missing
+
+def resolve_record_label(record_in_nkcr):
+    try:
+        return record_in_nkcr.first_name + " " + record_in_nkcr.last_name
+    except TypeError:
+        pass
+    if record_in_nkcr.human or record_in_nkcr.aut.startswith("ph"):
+        return record_in_nkcr.name
+    return record_in_nkcr.geographicNameWithoutBrackets
+
 def create_quickstatements_link(record_in_nkcr, force_qid = None, quickstatement_line_only = False):
     link = quickstatements()
     link.reset()
@@ -175,8 +212,7 @@ def create_quickstatements_link(record_in_nkcr, force_qid = None, quickstatement
     if create_new:
         try:
             link.set_label(record_in_nkcr.first_name + " " + record_in_nkcr.last_name)
-            link.set_label(record_in_nkcr.first_name + " " + record_in_nkcr.last_name, 'en')
-            link.set_label(record_in_nkcr.first_name + " " + record_in_nkcr.last_name, 'de')
+            link.set_label(record_in_nkcr.first_name + " " + record_in_nkcr.last_name, 'mul')
         except TypeError:
             link.set_label(record_in_nkcr.name)
         if (record_in_nkcr.human):
@@ -188,8 +224,15 @@ def create_quickstatements_link(record_in_nkcr, force_qid = None, quickstatement
             link.set_description(record_in_nkcr.description)
         else:
             link.set_label(record_in_nkcr.geographicNameWithoutBrackets)
-            link.set_label(record_in_nkcr.geographicNameWithoutBrackets, 'en')
-            link.set_label(record_in_nkcr.geographicNameWithoutBrackets, 'de')
+            link.set_label(record_in_nkcr.geographicNameWithoutBrackets, 'mul')
+    else:
+        missing_cs = get_missing_cs_terms(which_wd_item)
+        if missing_cs['label']:
+            label_cs = resolve_record_label(record_in_nkcr)
+            if label_cs:
+                link.set_label(label_cs)
+        if missing_cs['description'] and record_in_nkcr.description:
+            link.set_description(record_in_nkcr.description)
 
     link.set_nkcr(record_in_nkcr.aut, record_in_nkcr.name)
     link.set_aliases(record_in_nkcr.aliases)
