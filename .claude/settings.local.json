@@ -1,7 +1,10 @@
 {
   "permissions": {
     "allow": [
-      "mcp__serena__list_memories"
+      "mcp__serena__list_memories",
+      "Bash(awk '{print $5, $9}')",
+      "Bash(curl -s --max-time 15 \"https://hub.toolforge.org/cswiki:Karel_%C4%8Capek?site=wikidata&format=json\")",
+      "Bash(curl -s --max-time 15 -H \"User-Agent: VKOLbot-test/1.0\" \"https://hub.toolforge.org/viaf:12345?site=wikidata&format=json\")"
     ]
   }
 }
