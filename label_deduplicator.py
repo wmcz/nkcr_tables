@@ -1,3 +1,4 @@
+import os
 import requests
 import simplejson
 from wikibaseintegrator import wbi_helpers, WikibaseIntegrator, wbi_login
@@ -6,7 +7,7 @@ from wikibaseintegrator.wbi_exceptions import ModificationFailed
 
 wbi_config['USER_AGENT'] = 'Frettiebot/1.0 (https://www.wikidata.org/wiki/User:Frettiebot)'
 wbi_config['SPARQL_ENDPOINT_URL'] = 'https://qlever.cs.uni-freiburg.de/api/wikidata'
-login_instance = wbi_login.Login(user='Frettiebot', password='wikibaseintegrator@g3roop93tdhq0gdvku1d079j2pd51ah5')
+login_instance = wbi_login.Login(user='Frettiebot', password=os.environ['WD_BOT_PASSWORD'])
 wbi = WikibaseIntegrator(login=login_instance, is_bot=True)
 
 
