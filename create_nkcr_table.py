@@ -25,27 +25,15 @@ class create_table:
         self.quick_lines: list = []
         self.year: str = ''
         self.update_main_page: bool = True
-        self.debug: bool = False
 
     def table_line(self, record, count, mydata):
         assert isinstance(record, AutRecord)
-        aut = record.aut()
         record_in_nkcr = nkcr_record(record)
         if (count % 10 == 0):
             print('nkcr record counter: ' + str(count))
 
         if self.already_filled_in_wikidata(record_in_nkcr.aut):
             return False
-
-        qid_from_viaf = None
-
-        if (not self.debug):
-            if (qid_from_viaf is not None):
-                wd_link = nkcrlib.create_quickstatements_link(record_in_nkcr, qid_from_viaf)
-            else:
-                wd_link = ""
-        else:
-            wd_link = ""
 
         if (record_in_nkcr.wikiproject_from_nkcr != ''):
             qid_from_wiki = self.get_qid_by_wiki(record_in_nkcr.wikilang_from_nkcr, record_in_nkcr.wikiarticle_from_nkcr)
@@ -61,7 +49,6 @@ class create_table:
             'birth_qs': birth_to_table,
             'death_qs': death_to_table,
             'popis': record_in_nkcr.description,
-            'qid_from_viaf': wd_link,
             'akce': nkcrlib.create_search_link(record_in_nkcr.name) + "&nbsp;/&nbsp;" + nkcrlib.create_quickstatements_link(
                 record_in_nkcr)
         }
@@ -110,7 +97,6 @@ class create_table:
         wt.add_header_column('Narození')
         wt.add_header_column('Úmrtí')
         wt.add_header_column('Popis')
-        wt.add_header_column('QID z VIAF')
         wt.add_header_column('Akce')
 
         pattern = re.compile(r'aun|kon')
@@ -215,7 +201,7 @@ class create_table:
             if (int(wk['year']) == actual_year and actual_week_num == int(wk['week'])):
                 continue
             if (int(wk['year']) == actual_year):
-                if (len(prepared) <= OLDER_UPDATER_PAGE_COUNT):
+                if (len(prepared) < OLDER_UPDATER_PAGE_COUNT):
                     prepared.append(wk)
 
         if (len(prepared) < OLDER_UPDATER_PAGE_COUNT):
@@ -251,23 +237,6 @@ class create_table:
                     return False
         return False
 
-
-    def get_qid_by_viaf_id(self, viaf_id=''):
-        property = 'viaf'
-
-        try:
-            hub_link = "https://hub.toolforge.org/" + property + ":" + str(viaf_id) + "?site=wikidata&format=json"
-            response = requests.get(hub_link)
-            if response.status_code == 200:
-                json_record = response.text
-                data_record = json.loads(json_record)
-                wd_record = data_record['origin']['qid']
-                print('qid by viaf found: ' + str(viaf_id))
-                return wd_record
-            else:
-                return None
-        except (KeyError, TypeError, json.decoder.JSONDecodeError):
-            return None
 
     def get_qid_by_wiki(self, project, article):
         # `project` je jazykovy kod wiki (napr. "ca"), `article` muze prijit
@@ -343,30 +312,24 @@ class create_table:
         return None
 
 
-    def find_on_viaf(self, nkcr_aut=''):
-        try:
-
-            url_source_id_viaf = 'http://www.viaf.org/viaf/sourceID/NKC|' + str(nkcr_aut)
-            response = requests.get(url_source_id_viaf, allow_redirects=False)
-            viaf_url = response.next.url
-            splitted = viaf_url.split('/')
-            viaf_id = splitted[-1]
-            return self.get_qid_by_viaf_id(viaf_id)
-        except (KeyError, TypeError, AttributeError):
-            return None
-
     def run(self, week_num_force = None, year_num_force = None, quiet = False, from_exist_file = None):
         file = self._resolve_file_path(week_num_force, year_num_force, from_exist_file)
 
-        if file is not False:
-            self.load_to_table(file_name=file)
+        if file is False:
+            print('Soubor z NKCR se nepodařilo stáhnout (týden ' + str(week_num_force) + '), stránka nebude aktualizována.')
+            return
 
-            week_num = nkcrlib.get_week_num_to_download(week_num_force)
-            if year_num_force is None:
-                spl = file.split('-')
-                self.year = spl[0]
-            else:
-                self.year = str(year_num_force)
+        file_year = os.path.basename(file).split('-')[0]
+        if year_num_force is None:
+            self.year = file_year
+        else:
+            self.year = str(year_num_force)
+            if from_exist_file is None and file_year != self.year:
+                print('Soubor na FTP je z roku ' + file_year + ', očekáván rok ' + self.year + ' — stránka nebude aktualizována.')
+                return
 
-            printed_table = self._build_wiki_table(week_num)
-            self.save_page(week_num, printed_table, quiet)
+        self.load_to_table(file_name=file)
+
+        week_num = nkcrlib.get_week_num_to_download(week_num_force)
+        printed_table = self._build_wiki_table(week_num)
+        self.save_page(week_num, printed_table, quiet)

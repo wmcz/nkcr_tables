@@ -18,4 +18,4 @@ for page in prepared:
     c = create_nkcr_table.create_table()
     c.update_main_page = False
     c.table = []
-    c.run(int(page['week']))
+    c.run(int(page['week']), int(page['year']))

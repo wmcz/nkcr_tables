@@ -76,10 +76,9 @@ class quickstatements:
             value: The label string.
             lang: The language code (e.g., 'cs', 'en'). Defaults to 'cs'.
         """
-        try:
-            value = self.ENCLOSURE + value + self.ENCLOSURE
-        except TypeError:
-            value = ''
+        if not value:
+            return
+        value = self.ENCLOSURE + value + self.ENCLOSURE
         self.add_command(self.which_item + self.SEPARATOR + self.LABEL + lang + self.SEPARATOR + value + self.END_LINE)
 
     def set_alias(self, value: str, lang: str = 'cs') -> None:
@@ -114,12 +113,11 @@ class quickstatements:
             value: The description string.
             lang: The language code (e.g., 'cs', 'en'). Defaults to 'cs'.
         """
-        try:
-            if (len(value) > 250):
-                value = value[0:250]
-            value = self.ENCLOSURE + value + self.ENCLOSURE
-        except TypeError:
-            value = ''
+        if not value:
+            return
+        if (len(value) > 250):
+            value = value[0:250]
+        value = self.ENCLOSURE + value + self.ENCLOSURE
         self.add_command(self.which_item + self.SEPARATOR + self.DESCRIPTION + lang + self.SEPARATOR + value + self.END_LINE)
 
     def get_link(self) -> str:
@@ -181,20 +179,7 @@ class quickstatements:
         if value is None:
             return None
 
-        dt_string: str = ''
-        if len(str(value)) == 4:
-            precision = '9'  # Year precision
-            try:
-                dt = datetime(int(value), 1, 1)
-                dt_string = dt.strftime(f"+%Y-%m-%dT%H:%M:%SZ/{precision}")
-            except ValueError:
-                dt_string = ''
-        elif isinstance(value, datetime):
-            precision = '11'  # Day precision
-            try:
-                dt_string = value.strftime(f"+%Y-%m-%dT%H:%M:%SZ/{precision}")
-            except ValueError:
-                dt_string = ''
+        dt_string = self._format_date_value(value)
 
         if dt_string:
             ref = self._reference_suffix(nkcr_aut)
@@ -203,6 +188,33 @@ class quickstatements:
                 f"{ref}"
             )
             self.add_command(cmd)
+
+    def _format_date_value(self, value: Union[str, int, datetime]) -> str:
+        """
+        Converts a value to the QuickStatements time format.
+
+        Accepts a datetime (day precision) or a MARC 046 string:
+        'YYYY' (year precision), 'YYYYMM' (month precision),
+        'YYYYMMDD' (day precision). Returns '' for anything else.
+        """
+        if isinstance(value, datetime):
+            return value.strftime("+%Y-%m-%dT%H:%M:%SZ/11")
+        s = str(value).strip()
+        if not s.isdigit():
+            return ''
+        try:
+            if len(s) == 4:
+                datetime(int(s), 1, 1)
+                return f"+{s}-01-01T00:00:00Z/9"
+            if len(s) == 6:
+                datetime(int(s[0:4]), int(s[4:6]), 1)
+                return f"+{s[0:4]}-{s[4:6]}-00T00:00:00Z/10"
+            if len(s) == 8:
+                datetime(int(s[0:4]), int(s[4:6]), int(s[6:8]))
+                return f"+{s[0:4]}-{s[4:6]}-{s[6:8]}T00:00:00Z/11"
+        except ValueError:
+            return ''
+        return ''
 
     def now_time(self) -> str:
         """

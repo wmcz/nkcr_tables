@@ -88,31 +88,12 @@ def get_week_num_to_download(force_week = None):
     actual_week_num_obj = datetime.datetime.now()
     actual_week_num = actual_week_num_obj.isocalendar()[1]
     year = actual_week_num_obj.year
-    if year == 2025:
-        week_num_to_download = actual_week_num - 2
-        if (actual_week_num == 1):
-            week_num_to_download = 51
-    elif year == 2026:
-        week_num_to_download = actual_week_num - 2
-        if (actual_week_num == 1):
-            week_num_to_download = 51
-    else:
-        week_num_to_download = actual_week_num - 1
-        if (week_num_to_download == 0):
-            week_num_to_download = 52
+    # NKCR exporty jsou od roku 2025 cislovane s posunem o 2 tydny
+    offset = 2 if year in (2025, 2026) else 1
+    week_num_to_download = actual_week_num - offset
+    if (week_num_to_download <= 0):
+        week_num_to_download += 52
     return week_num_to_download
-
-def get_year_actual():
-    actual_week_num_obj = datetime.datetime.now()
-    actual_week_num = actual_week_num_obj.isocalendar()[1]
-    year = actual_week_num_obj.year
-    if year == 2025:
-        week_num_to_download = actual_week_num - 2
-    else:
-        week_num_to_download = actual_week_num - 1
-        if (week_num_to_download == 0):
-            year = year-1
-    return year
 
 def download_actual_file_from_nkcr(force = None):
     import ftputil
@@ -210,21 +191,15 @@ def create_quickstatements_link(record_in_nkcr, force_qid = None, quickstatement
 
     link.set_item_to_add(which_wd_item)
     if create_new:
-        try:
-            link.set_label(record_in_nkcr.first_name + " " + record_in_nkcr.last_name)
-            link.set_label(record_in_nkcr.first_name + " " + record_in_nkcr.last_name, 'mul')
-        except TypeError:
-            link.set_label(record_in_nkcr.name)
+        label = resolve_record_label(record_in_nkcr)
+        link.set_label(label)
+        link.set_label(label, 'mul')
         if (record_in_nkcr.human):
             link.set_gender(record_in_nkcr.aut, record_in_nkcr.name, record_in_nkcr.gender)
             link.set_human(record_in_nkcr.aut, record_in_nkcr.name, record_in_nkcr.human)
             link.set_description(record_in_nkcr.description)
         elif record_in_nkcr.aut.startswith("ph"):
-            link.set_label(record_in_nkcr.name)
             link.set_description(record_in_nkcr.description)
-        else:
-            link.set_label(record_in_nkcr.geographicNameWithoutBrackets)
-            link.set_label(record_in_nkcr.geographicNameWithoutBrackets, 'mul')
     else:
         missing_cs = get_missing_cs_terms(which_wd_item)
         if missing_cs['label']:

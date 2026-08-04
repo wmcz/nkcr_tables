@@ -64,14 +64,14 @@ class WikiTable:
         """Renders the table to wikitext."""
         previous_year = self.year
         previous_week = self.week_num - 1
-        if previous_week < 0:
-            previous_week = 51
+        if previous_week < 1:
+            previous_week = 52
             previous_year -= 1
 
         next_year = self.year
         next_week = self.week_num + 1
-        if next_week == 53:
-            next_week = 0
+        if next_week > 52:
+            next_week = 1
             next_year += 1
             
         template = Template(self.template_text)

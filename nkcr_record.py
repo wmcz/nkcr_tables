@@ -89,11 +89,11 @@ class nkcr_record:
             self.name = self.city
 
             regex = r"(.*) : okres"
-            matches = re.search(regex, self.county, re.IGNORECASE)
             try:
+                matches = re.search(regex, self.county, re.IGNORECASE)
                 groups = matches.groups()
                 self.county = groups[0]
-            except AttributeError:
+            except (AttributeError, TypeError):
                 self.county = ""
 
     def resolve_quickstatements_dates(self):
