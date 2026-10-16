@@ -162,7 +162,11 @@ class create_table:
             except pywikibot.exceptions.NoPageError:
                 print('No page:' + 'Wikidata:WikiProject Czech Republic/New authorities')
                 return
-            except pywikibot.exceptions.MaxlagTimeoutError:
+            except (pywikibot.exceptions.MaxlagTimeoutError, pywikibot.exceptions.OtherPageSaveError) as e:
+                # page.save() obaluje MaxlagTimeoutError do OtherPageSaveError
+                if isinstance(e, pywikibot.exceptions.OtherPageSaveError) \
+                        and not isinstance(e.reason, pywikibot.exceptions.MaxlagTimeoutError):
+                    raise
                 if attempt < 4:
                     print(f'MaxlagTimeoutError při ukládání, čekám 120s (pokus {attempt + 1}/5)')
                     time.sleep(120)
