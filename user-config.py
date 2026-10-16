@@ -40,6 +40,7 @@ mylang = 'wikidata'
 # have a bot account. If you have a unique username for all languages of a
 # family , you can use '*'
 usernames['wikidata']['wikidata'] = u'frettiebot'
+password_file = 'user-password.py'
 # usernames['wikidata']['wikidata'] = u'Frettie'
 usernames['autority']['autority'] = u'Frettie'
 # sysopnames['autority']['autority'] = u'Frettie'
