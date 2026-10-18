@@ -2,6 +2,7 @@ from autxmlhandler import AutXmlHandler
 from pymarc.marcxml import parse_xml
 import datetime
 import json
+import os
 import requests
 from quickstatements import quickstatements
 
@@ -141,6 +142,28 @@ def create_nkcr_link(nkcr_aut):
     link = ' ([https://aleph.nkp.cz/F/?func=find-c&local_base=aut&ccl_term=ica=' + nkcr_aut + ' ' + nkcr_aut + '])'
     return link
 
+WIKIMEDIA_USER_AGENT = 'VKOLbot/1.0 (jirisedlacek@gmail.com)'
+
+# Owner-only OAuth 2 klient ma posilat i cookies, jinak se neuplatni spravna trida rate limitu.
+wikimedia_session = requests.Session()
+
+def _fail_on_invalid_token(response, *args, **kwargs):
+    # Neplatny/prosly token nesmi skoncit tichym False (zaznam by vypadal jako nevyplneny).
+    if response.status_code == 401:
+        raise RuntimeError('Wikimedia API odmitlo OAuth 2 token (WD_OAUTH2_TOKEN): ' + response.text[:200])
+
+wikimedia_session.hooks['response'].append(_fail_on_invalid_token)
+
+def wikimedia_headers(accept = None):
+    """Hlavicky pro Wikimedia API; token jen na hosty WMF, ne na toolforge ani SPARQL."""
+    headers = {'User-Agent': WIKIMEDIA_USER_AGENT}
+    if accept is not None:
+        headers['Accept'] = accept
+    token = os.environ.get('WD_OAUTH2_TOKEN')
+    if token:
+        headers['Authorization'] = 'Bearer ' + token
+    return headers
+
 _missing_cs_terms_cache = {}
 
 def get_missing_cs_terms(qid):
@@ -155,9 +178,8 @@ def get_missing_cs_terms(qid):
         'action': 'wbgetentities', 'ids': qid,
         'props': 'labels|descriptions', 'languages': 'cs', 'format': 'json'
     }
-    headers = {'User-Agent': 'VKOLbot/1.0 (jirisedlacek@gmail.com)'}
     try:
-        response = requests.get('https://www.wikidata.org/w/api.php', params=params, headers=headers, timeout=30)
+        response = wikimedia_session.get('https://www.wikidata.org/w/api.php', params=params, headers=wikimedia_headers(), timeout=30)
         if response.status_code == 200:
             entity = response.json()['entities'][qid]
             missing['label'] = 'cs' not in entity.get('labels', {})

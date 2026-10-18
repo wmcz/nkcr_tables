@@ -216,18 +216,19 @@ class create_table:
         return prepared
 
     def already_filled_in_wikidata(self, nkcr_aut=''):
-        sparql_url = "https://query-main.wikidata.org/sparql"
-        query = 'SELECT ?item WHERE { ?item wdt:P691 "' + str(nkcr_aut) + '" . }'
-        headers = {
-            'Accept': 'application/sparql-results+json',
-            'User-Agent': 'VKOLbot/1.0 (jirisedlacek@gmail.com)'
+        # Action API misto SPARQL: WDQS ma vlastni limity, ktere OAuth token neobejde.
+        api = "https://www.wikidata.org/w/api.php"
+        params = {
+            'action': 'query', 'list': 'search', 'srsearch': 'haswbstatement:P691=' + str(nkcr_aut),
+            'srnamespace': 0, 'srlimit': 1, 'srinfo': '', 'srprop': '', 'format': 'json'
         }
+        headers = nkcrlib.wikimedia_headers('application/json')
         for i in range(5):
             try:
-                response = requests.get(sparql_url, params={'query': query}, headers=headers, timeout=30)
+                response = nkcrlib.wikimedia_session.get(api, params=params, headers=headers, timeout=30)
                 if response.status_code == 200:
                     data = response.json()
-                    return len(data['results']['bindings']) > 0
+                    return len(data['query']['search']) > 0
                 if response.status_code == 429:
                     retry_after = int(response.headers.get('Retry-After', 60))
                     time.sleep(retry_after)
@@ -258,13 +259,10 @@ class create_table:
             'action': 'query', 'prop': 'pageprops', 'ppprop': 'wikibase_item',
             'titles': title, 'redirects': 1, 'format': 'json'
         }
-        headers = {
-            'Accept': 'application/json',
-            'User-Agent': 'VKOLbot/1.0 (jirisedlacek@gmail.com)'
-        }
+        headers = nkcrlib.wikimedia_headers('application/json')
         for i in range(5):
             try:
-                response = requests.get(api, params=params, headers=headers, timeout=30)
+                response = nkcrlib.wikimedia_session.get(api, params=params, headers=headers, timeout=30)
                 if response.status_code == 200:
                     pages = response.json().get('query', {}).get('pages', {})
                     for page in pages.values():
