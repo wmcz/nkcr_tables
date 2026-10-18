@@ -7,3 +7,4 @@
 *.lwp
 *.pyc
 /.pywikibot-password.py
+/oauth.txt
