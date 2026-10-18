@@ -40,7 +40,14 @@ mylang = 'wikidata'
 # have a bot account. If you have a unique username for all languages of a
 # family , you can use '*'
 usernames['wikidata']['wikidata'] = u'frettiebot'
-password_file = 'user-password.py'
+# pywikibot cte password_file pres literal_eval, proto se heslo z env propise do souboru mimo git.
+import os as _os
+_bot_password = _os.environ.get('WD_BOT_PASSWORD')
+if _bot_password:
+    password_file = '.pywikibot-password.py'
+    _fd = _os.open(_os.path.join(base_dir, password_file), _os.O_WRONLY | _os.O_CREAT | _os.O_TRUNC, 0o600)
+    with _os.fdopen(_fd, 'w') as _f:
+        _f.write(repr(('wikidata', 'Frettiebot', _bot_password)) + '\n')
 # usernames['wikidata']['wikidata'] = u'Frettie'
 usernames['autority']['autority'] = u'Frettie'
 # sysopnames['autority']['autority'] = u'Frettie'

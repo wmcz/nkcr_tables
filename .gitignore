@@ -6,3 +6,4 @@
 *.xml
 *.lwp
 *.pyc
+/.pywikibot-password.py
