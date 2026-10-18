@@ -25,6 +25,7 @@ class create_table:
         self.quick_lines: list = []
         self.year: str = ''
         self.update_main_page: bool = True
+        self.existing_auts = None
 
     def table_line(self, record, count, mydata):
         assert isinstance(record, AutRecord)
@@ -59,7 +60,41 @@ class create_table:
         return False
 
     def load_to_table(self, file_name):
+        self.existing_auts = self.fetch_existing_auts(file_name)
         nkcrlib.map_xml(self.table_line, file_name)
+
+    def fetch_existing_auts(self, file_name):
+        """Vrati mnozinu NKCR ID ze souboru, ktera uz maji P691 na Wikidatech, nebo None pri chybe."""
+        auts = []
+        nkcrlib.map_xml(lambda record, count, mydata: auts.append(record.aut()), file_name)
+        auts = [aut for aut in auts if aut]
+        existing = set()
+        for start in range(0, len(auts), 200):
+            values = ' '.join(json.dumps(aut) for aut in auts[start:start + 200])
+            bindings = self._sparql('SELECT ?aut WHERE { VALUES ?aut { ' + values + ' } ?item wdt:P691 ?aut . }')
+            if bindings is None:
+                return None
+            existing.update(binding['aut']['value'] for binding in bindings)
+        return existing
+
+    def _sparql(self, query):
+        headers = {
+            'Accept': 'application/sparql-results+json',
+            'User-Agent': nkcrlib.WIKIMEDIA_USER_AGENT
+        }
+        for i in range(5):
+            try:
+                response = requests.post("https://query-main.wikidata.org/sparql", data={'query': query}, headers=headers, timeout=60)
+                if response.status_code == 200:
+                    return response.json()['results']['bindings']
+                if response.status_code == 429:
+                    time.sleep(int(response.headers.get('Retry-After', 60)))
+                    continue
+            except (KeyError, TypeError, ValueError, requests.exceptions.RequestException):
+                pass
+            if i < 4:
+                time.sleep(5)
+        return None
 
     def _resolve_file_path(self, week_num_force, year_num_force, from_exist_file):
         """
@@ -201,7 +236,9 @@ class create_table:
         return prepared
 
     def already_filled_in_wikidata(self, nkcr_aut=''):
-        # Action API misto SPARQL: WDQS ma vlastni limity, ktere OAuth token neobejde.
+        if self.existing_auts is not None:
+            return nkcr_aut in self.existing_auts
+        # Fallback po jednom zaznamu pres Action API; SPARQL po jednom narazel na limity WDQS.
         api = "https://www.wikidata.org/w/api.php"
         params = {
             'action': 'query', 'list': 'search', 'srsearch': 'haswbstatement:P691=' + str(nkcr_aut),
