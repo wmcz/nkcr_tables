@@ -174,28 +174,13 @@ class create_table:
                     print('MaxlagTimeoutError: všechny pokusy selhaly, stránka nebyla uložena')
 
     def get_exist_pages(self, site):
-
+        prefix = 'WikiProject Czech Republic/New authorities/'
         exist_weeks = []
-
-        years = ['2020', '2021', '2022', '2023', '2024', '2025', '2026', '2027', '2028', '2029', '2030']
-
-        weeks = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
-                 '10', '11', '12', '13', '14', '15', '16', '17', '18', '19',
-                 '20', '21', '22', '23', '24', '25', '26', '27', '28', '29',
-                 '30', '31', '32', '33', '34', '35', '36', '37', '38', '39',
-                 '40', '41', '42', '43', '44', '45', '46', '47', '48', '49',
-                 '50', '51', '52'
-                 ]
-
-        for year in years:
-            for week in weeks:
-                try:
-                    page = pywikibot.Page(site, 'Wikidata:WikiProject Czech Republic/New authorities/' + str(year) + '/' + str(week))
-                    page.get()
-                    wk = {'week' : week, 'year' : year}
-                    exist_weeks.append(wk)
-                except pywikibot.exceptions.NoPageError:
-                    pass
+        for page in site.allpages(prefix=prefix, namespace=4, filterredir=False):
+            match = re.fullmatch(r'(\d{4})/(0|[1-9]\d?)', page.title(with_ns=False)[len(prefix):])
+            if match:
+                exist_weeks.append({'week': match.group(2), 'year': match.group(1)})
+        exist_weeks.sort(key=lambda wk: (int(wk['year']), int(wk['week'])))
         return exist_weeks
 
     def prepare_pages_for_older_updater(self, exist_pages, actual_year, actual_week_num):
