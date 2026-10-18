@@ -285,6 +285,9 @@ class create_table:
                         return response.json()['destination']['preferedSitelink']['title']
                     except (KeyError, TypeError, json.decoder.JSONDecodeError):
                         return None
+                # 404 = clanek na hubu neni, opakovani by jen 4x cekalo 5 s
+                if 400 <= response.status_code < 500 and response.status_code != 429:
+                    return None
                 if response.status_code == 429:
                     retry_after = int(response.headers.get('Retry-After', 60))
                     time.sleep(retry_after)
