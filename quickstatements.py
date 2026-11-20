@@ -11,7 +11,7 @@ class quickstatements:
     dates (birth/death), NKCR authority IDs, gender, and human instance.
     """
 
-    QUICKSTATEMENTS_LINK: str = 'https://tools.wmflabs.org/quickstatements/#v1='
+    QUICKSTATEMENTS_LINK: str = 'https://qs-dev.toolforge.org/batch/new/?v1='
 
     END_LINE: str = '||'
     SEPARATOR: str = '|'
@@ -238,15 +238,15 @@ class quickstatements:
             name_in_nkcr: The name string as it appears in NKCR.
         """
         nkcr_aut_enclosed = self.ENCLOSURE + nkcr_aut + self.ENCLOSURE
-        try:
-            name_in_nkcr_enclosed = self.ENCLOSURE + name_in_nkcr + self.ENCLOSURE
-        except TypeError:
-            name_in_nkcr_enclosed = ''
+        # an empty P1810 would produce "||", which QS reads as a line break
+        qualifier = ''
+        if isinstance(name_in_nkcr, str) and name_in_nkcr:
+            qualifier = f"P1810{self.SEPARATOR}{self.ENCLOSURE}{name_in_nkcr}{self.ENCLOSURE}{self.SEPARATOR}"
 
         ref = self._reference_suffix(nkcr_aut)
         cmd = (
             f"{self.which_item}{self.SEPARATOR}P691{self.SEPARATOR}{nkcr_aut_enclosed}{self.SEPARATOR}"
-            f"P1810{self.SEPARATOR}{name_in_nkcr_enclosed}{self.SEPARATOR}"
+            f"{qualifier}"
             f"{ref}"
         )
         self.add_command(cmd)
