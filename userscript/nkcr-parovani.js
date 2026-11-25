@@ -183,11 +183,17 @@
 		if (!model.name) throw new Error('záznam nemá label – zakládat bez jména nebudu');
 		var data = { labels: termsList(model.labels), claims: model.claims };
 		if (Object.keys(model.descriptions).length) data.descriptions = termsList(model.descriptions);
-		var aliases = [];
+		// Grouped by language: a flat list without "add" makes each entry replace the previous one.
+		var aliases = {};
 		Object.keys(model.aliases).forEach(function (lang) {
-			model.aliases[lang].forEach(function (v) { aliases.push({ language: lang, value: v }); });
+			var seen = [];
+			model.aliases[lang].forEach(function (v) {
+				if (seen.indexOf(v.toLowerCase()) !== -1) return;
+				seen.push(v.toLowerCase());
+				(aliases[lang] = aliases[lang] || []).push({ language: lang, value: v });
+			});
 		});
-		if (aliases.length) data.aliases = aliases;
+		if (Object.keys(aliases).length) data.aliases = aliases;
 		return data;
 	}
 
@@ -196,6 +202,66 @@
 		if (dv.type === 'wikibase-entityid') return dv.value.id || ('Q' + dv.value['numeric-id']);
 		if (dv.type === 'time') return dv.value.time + '/' + dv.value.precision;
 		return String(dv.value);
+	}
+
+	function hasNkcrRef(claim) {
+		return (claim.references || []).some(function (r) {
+			var s = r.snaks || {};
+			return !!s.P691 || (s.P248 || []).some(function (sn) { return claimValueKey(sn.datavalue) === 'Q13550863'; });
+		});
+	}
+
+	// Existing claim with its id, qualifiers and references kept, so wbeditentity updates it in place.
+	function withChanges(e, changes) {
+		var out = { id: e.id, type: 'statement', mainsnak: e.mainsnak, rank: e.rank || 'normal' };
+		if (e.qualifiers) out.qualifiers = e.qualifiers;
+		if (e['qualifiers-order']) out['qualifiers-order'] = e['qualifiers-order'];
+		if (e.references) out.references = e.references;
+		Object.keys(changes).forEach(function (k) { out[k] = changes[k]; });
+		return out;
+	}
+
+	function dateParts(v) {
+		var m = /^([+-])0*(\d+)-(\d{2})-(\d{2})T/.exec(v.time || '');
+		if (!m) return null;
+		return { y: (m[1] === '-' ? '-' : '') + m[2], m: m[3], d: m[4], p: v.precision, cal: v.calendarmodel };
+	}
+
+	// Compares only as far as both values are precise, so a year stored as 1924-00-00 or 1924-01-01 matches 1924.
+	function sameDateUpTo(a, b, p) {
+		if (a.y !== b.y) return false;
+		if (p >= 10 && a.m !== b.m) return false;
+		if (p >= 11 && (a.d !== b.d || a.cal !== b.cal)) return false;
+		return true;
+	}
+
+	// Returns {skip}, {source: claim to add the NKČR reference to} or {coarser: [less precise claims]} (+ add ours).
+	function planDate(c, existing) {
+		var ours = dateParts(c.mainsnak.datavalue.value);
+		var plan = { coarser: [] };
+		var equal = null, finer = false, conflict = [];
+		for (var i = 0; i < existing.length; i++) {
+			var e = existing[i];
+			var dv = e.mainsnak && e.mainsnak.datavalue;
+			var ex = dv && dv.type === 'time' ? dateParts(dv.value) : null;
+			if (!ex || ex.p < 9) {
+				if (e.rank !== 'deprecated') conflict.push(dv ? dvText(dv) : 'neznámá hodnota');
+				continue;
+			}
+			var match = sameDateUpTo(ours, ex, Math.min(ours.p, ex.p));
+			if (e.rank === 'deprecated') {
+				if (match && ex.p === ours.p) return { skip: dvText(dv) + ' je na položce označené jako zastaralé' };
+				continue;
+			}
+			if (!match) conflict.push(dvText(dv));
+			else if (ex.p === ours.p) equal = equal || e;
+			else if (ex.p > ours.p) finer = true;
+			else plan.coarser.push(e);
+		}
+		if (conflict.length) return { skip: 'jiné datum na položce (' + conflict.join(', ') + ')' };
+		if (equal) return { source: equal };
+		if (finer) return { skip: 'na položce je přesnější datum' };
+		return plan;
 	}
 
 	// Same rules as the Python generator for existing items (only fill what is missing).
@@ -210,18 +276,21 @@
 
 		if (model.labels.cs) {
 			if (!labels.cs) data.labels = { cs: { language: 'cs', value: model.labels.cs } };
-			else skipped.push('label cs už je („' + labels.cs.value + '“)');
+			else skipped.push('label cs už je („' + labels.cs.value + '“), náš jde do aliasů, pokud tam není');
 		}
 		if (model.descriptions.cs) {
 			if (!descs.cs) data.descriptions = { cs: { language: 'cs', value: model.descriptions.cs } };
 			else skipped.push('popis cs už je');
 		}
+		var aliasSource = {};
+		Object.keys(model.aliases).forEach(function (lang) { aliasSource[lang] = model.aliases[lang].slice(); });
+		if (model.labels.cs && labels.cs) (aliasSource.cs = aliasSource.cs || []).unshift(model.labels.cs);
 		var aliases = [];
-		Object.keys(model.aliases).forEach(function (lang) {
+		Object.keys(aliasSource).forEach(function (lang) {
 			var have = (existingAliases[lang] || []).slice();
 			if (labels[lang]) have.push(labels[lang].value.toLowerCase());
 			if (lang === 'cs' && data.labels && data.labels.cs) have.push(data.labels.cs.value.toLowerCase());
-			model.aliases[lang].forEach(function (v) {
+			aliasSource[lang].forEach(function (v) {
 				if (have.indexOf(v.toLowerCase()) === -1) {
 					aliases.push({ language: lang, value: v, add: '' });
 					have.push(v.toLowerCase());
@@ -231,6 +300,11 @@
 		if (aliases.length) data.aliases = aliases;
 
 		var newClaims = [];
+		function addSource(e, c) {
+			if (!c.references || !c.references.length || hasNkcrRef(e)) return false;
+			newClaims.push(withChanges(e, { references: (e.references || []).concat(c.references) }));
+			return true;
+		}
 		model.claims.forEach(function (c) {
 			var p = c.mainsnak.property;
 			var existing = claims[p] || [];
@@ -238,9 +312,27 @@
 			var keys = existing.map(function (e) { return claimValueKey(e.mainsnak && e.mainsnak.datavalue); });
 			if (p === 'P691') {
 				if (keys.indexOf(key) !== -1) { skipped.push('P691 ' + key + ' už je'); return; }
-				if (keys.length) throw new Error('položka už má jiné NKČR ID (' + keys.join(', ') + ') – nepárovat');
-			} else if (p === 'P569' || p === 'P570' || p === 'P31' || p === 'P21') {
-				if (existing.length) { skipped.push(p + ' už je (' + keys.join(', ') + ')'); return; }
+				if (keys.length) skipped.push('pozor: položka už má i jiné NKČR ID (' + keys.join(', ') + '), přidávám druhé');
+			} else if (p === 'P31' || p === 'P21') {
+				var live = existing.filter(function (e) { return e.rank !== 'deprecated'; });
+				var same = live.filter(function (e) { return claimValueKey(e.mainsnak && e.mainsnak.datavalue) === key; });
+				if (same.length) {
+					if (!addSource(same[0], c)) skipped.push(p + ' ' + key + ' už je i se zdrojem NKČR');
+					return;
+				}
+				if (existing.length) { skipped.push(p + ' už je jiné (' + keys.join(', ') + ')'); return; }
+			} else if (p === 'P569' || p === 'P570') {
+				var plan = planDate(c, existing);
+				if (plan.skip) { skipped.push(p + ' ' + plan.skip); return; }
+				if (plan.source) {
+					if (!addSource(plan.source, c)) skipped.push(p + ' ' + dvText(c.mainsnak.datavalue) + ' už je i se zdrojem NKČR');
+					return;
+				}
+				if (plan.coarser.length) {
+					// Wikidata convention: keep the less precise date, mark the more precise one preferred.
+					plan.coarser.forEach(function (e) { if (e.rank === 'preferred') newClaims.push(withChanges(e, { rank: 'normal' })); });
+					c = Object.assign({}, c, { rank: 'preferred' });
+				}
 			} else if (keys.indexOf(key) !== -1) {
 				skipped.push(p + ' ' + key + ' už je');
 				return;
@@ -287,9 +379,15 @@
 				out.push((k === 'labels' ? 'label ' : 'popis ') + l + ': ' + data[k][l].value);
 			});
 		});
-		(data.aliases || []).forEach(function (a) { out.push('alias ' + a.language + ': ' + a.value); });
+		var al = data.aliases || [];
+		if (!Array.isArray(al)) al = Object.keys(al).reduce(function (acc, l) { return acc.concat(al[l]); }, []);
+		al.forEach(function (a) { out.push('alias ' + a.language + ': ' + a.value); });
 		(data.claims || []).forEach(function (c) {
-			var line = c.mainsnak.property + ' = ' + dvText(c.mainsnak.datavalue);
+			if (c.id) {
+				out.push(c.mainsnak.property + ' = ' + dvText(c.mainsnak.datavalue) + ' (stávající) → ' + (c.rank === 'normal' ? 'zrušit preferovaný rank' : 'doplnit zdroj NKČR'));
+				return;
+			}
+			var line = c.mainsnak.property + ' = ' + dvText(c.mainsnak.datavalue) + (c.rank === 'preferred' ? ' (preferovaný)' : '');
 			Object.keys(c.qualifiers || {}).forEach(function (q) {
 				line += ', ' + q + ' ' + c.qualifiers[q].map(function (sn) { return dvText(sn.datavalue); }).join(', ');
 			});
@@ -356,11 +454,13 @@
 
 		mw.util.addCSS([
 			'.nkcrp-bar{margin:.5em 0;padding:.4em .6em;border:1px solid #a2a9b1;background:#f8f9fa;font-size:90%}',
-			'.nkcrp{margin-top:6px;font-size:90%;line-height:1.4}',
+			'.nkcrp{position:relative;margin-top:6px;font-size:90%;line-height:1.4}',
+			'.nkcrp-line{display:flex;align-items:center;height:calc(1.4em + 8px);min-width:30em;white-space:nowrap}',
 			'.nkcrp button{font-size:inherit;padding:.5px 8px 1.5px;margin:2px 4px 2px 0;cursor:pointer;line-height:1.4}',
 			'.nkcrp button[disabled]{cursor:default;opacity:.6}',
 			'.nkcrp-ico{position:relative;top:1px}',
-			'.nkcrp-panel{margin-top:4px;padding:4px 6px;border-left:3px solid #a2a9b1;background:#f8f9fa}',
+			'.nkcrp-pop{position:absolute;right:0;top:100%;z-index:10;width:max-content;max-width:min(40em,90vw);max-height:60vh;overflow:auto;padding:6px 8px;border:1px solid #a2a9b1;border-radius:2px;background:var(--background-color-base,#fff);box-shadow:0 2px 8px rgba(0,0,0,.25);text-align:left}',
+			'.nkcrp-pop .nkcrp-x{float:right;margin:0 0 4px 8px}',
 			'.nkcrp-cand{padding:2px 0}',
 			'.nkcrp-cand.is-year{background:#e6f4ea}',
 			'.nkcrp-warn{color:#b32424}',
@@ -502,14 +602,49 @@
 
 		function renderDone(box, done) {
 			box.textContent = '';
-			box.appendChild(el('span', { class: 'nkcrp-ok', text: '✓ ' }));
-			box.appendChild(itemLink(done.q));
+			var line = el('div', { class: 'nkcrp-line' });
+			line.appendChild(el('span', { class: 'nkcrp-ok', text: '✓ ' }));
+			line.appendChild(itemLink(done.q));
 			if (done.rev) {
-				box.appendChild(document.createTextNode(' · '));
-				box.appendChild(extLink('https://www.wikidata.org/wiki/Special:Diff/' + done.rev, 'diff'));
+				line.appendChild(document.createTextNode(' · '));
+				line.appendChild(extLink('https://www.wikidata.org/wiki/Special:Diff/' + done.rev, 'diff'));
 			}
-			if (done.nothing) box.appendChild(el('span', { class: 'nkcrp-muted', text: ' (nebylo co doplnit)' }));
-			if (done.skipped && done.skipped.length) box.appendChild(el('div', { class: 'nkcrp-muted', text: 'vynecháno: ' + done.skipped.join('; ') }));
+			if (done.nothing) line.appendChild(el('span', { class: 'nkcrp-muted', text: ' (nebylo co doplnit)' }));
+			if (done.skipped && done.skipped.length) {
+				line.appendChild(el('span', { class: 'nkcrp-muted', text: ' · vynecháno ⓘ', title: done.skipped.join('\n') }));
+			}
+			box.appendChild(line);
+		}
+
+		var openPops = [];
+		function closeAllPops(except) {
+			openPops.slice().forEach(function (close) { if (close !== except) close(); });
+		}
+		document.addEventListener('click', function (e) {
+			if (!e.target.closest || !e.target.closest('.nkcrp')) closeAllPops();
+		});
+		document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeAllPops(); });
+
+		// Floating box under the row, so opening it does not change the row height.
+		function makePop() {
+			var pop = el('div', { class: 'nkcrp-pop' });
+			pop.style.display = 'none';
+			var api = {
+				node: pop,
+				isOpen: function () { return pop.style.display !== 'none'; },
+				open: function () {
+					closeAllPops(api.close);
+					pop.style.display = '';
+					if (openPops.indexOf(api.close) === -1) openPops.push(api.close);
+				},
+				close: function () {
+					pop.style.display = 'none';
+					openPops = openPops.filter(function (c) { return c !== api.close; });
+					if (api.onclose) api.onclose();
+				},
+				onclose: null
+			};
+			return api;
 		}
 
 		function setupRow(link) {
@@ -530,15 +665,28 @@
 			var done = storeGet('done:' + model.aut);
 			if (done) { renderDone(box, done); return; }
 
-			var state = { target: model.target, busy: false, open: false };
+			var state = { target: model.target, busy: false };
 			var mainBtn = el('button', { type: 'button' });
 			var candBtn = el('button', { type: 'button' });
 			var unpairBtn = el('button', { type: 'button' });
 			setBtn(candBtn, '🔍', 'kandidáti ▾');
-			setBtn(unpairBtn, '×', 'zrušit párování');
-			var status = el('div');
-			var panel = el('div', { class: 'nkcrp-panel' });
-			panel.style.display = 'none';
+			unpairBtn.textContent = '×';
+			unpairBtn.title = 'zrušit párování';
+			var line = el('div', { class: 'nkcrp-line' });
+			var busyMark = el('span', { class: 'nkcrp-muted' });
+			var candPop = makePop(), statusPop = makePop();
+			var panel = el('div'), status = el('div');
+			var closeBtn = el('button', { type: 'button', class: 'nkcrp-x', text: '×', onclick: function () { statusPop.close(); } });
+			candPop.node.appendChild(panel);
+			statusPop.node.appendChild(closeBtn);
+			statusPop.node.appendChild(status);
+			candPop.onclose = function () { setBtn(candBtn, '🔍', 'kandidáti ▾'); };
+
+			function showStatus(nodes) {
+				status.textContent = '';
+				nodes.forEach(function (n) { if (n) status.appendChild(n); });
+				statusPop.open();
+			}
 
 			function refresh() {
 				var t = state.target;
@@ -547,11 +695,13 @@
 				mainBtn.title = (t === 'CREATE' && !model.name) ? 'záznam nemá jméno' : '';
 				unpairBtn.style.display = (t !== model.target) ? '' : 'none';
 				candBtn.disabled = state.busy;
+				busyMark.textContent = state.busy ? '… ukládám' : '';
 			}
 
 			function pair(q) {
 				state.target = q;
-				status.textContent = '';
+				candPop.close();
+				statusPop.close();
 				refresh();
 			}
 
@@ -560,8 +710,8 @@
 			mainBtn.addEventListener('click', function () {
 				if (state.busy) return;
 				state.busy = true;
+				statusPop.close();
 				refresh();
-				status.textContent = '… ukládám';
 				var target = state.target;
 				var res;
 				try {
@@ -571,31 +721,32 @@
 				}
 				$.when(res).then(function (r) {
 					state.busy = false;
-					status.textContent = '';
+					refresh();
 					if (r.dry) {
-						status.appendChild(el('div', { class: 'nkcrp-muted', text: 'Nanečisto – tohle by se poslalo (' + (r.params['new'] ? 'nová položka' : r.params.id) + '):' }));
-						if (r.skipped && r.skipped.length) status.appendChild(el('div', { class: 'nkcrp-muted', text: 'vynecháno: ' + r.skipped.join('; ') }));
-						status.appendChild(el('ul', {}, describeData(r.data).map(function (line) { return el('li', { text: line }); })));
-						status.appendChild(el('details', {}, [el('summary', { text: 'JSON' }), el('pre', { text: JSON.stringify(r.data, null, 1) })]));
-						refresh();
+						showStatus([
+							el('div', { class: 'nkcrp-muted', text: 'Nanečisto – tohle by se poslalo (' + (r.params['new'] ? 'nová položka' : r.params.id) + '):' }),
+							(r.skipped && r.skipped.length) ? el('div', { class: 'nkcrp-muted', text: 'vynecháno: ' + r.skipped.join('; ') }) : null,
+							el('ul', {}, describeData(r.data).map(function (l) { return el('li', { text: l }); })),
+							el('details', {}, [el('summary', { text: 'JSON' }), el('pre', { text: JSON.stringify(r.data, null, 1) })])
+						]);
 						return;
 					}
 					var d = { q: r.q, rev: r.rev, skipped: r.skipped, nothing: r.nothing, ts: Date.now() };
 					storeSet('done:' + model.aut, d);
+					candPop.close();
 					renderDone(box, d);
 				}, function (code, result) {
 					state.busy = false;
-					status.textContent = '';
-					status.appendChild(el('span', { class: 'nkcrp-warn', text: '⚠ ' + apiErrorText(code, result) }));
 					refresh();
+					showStatus([el('span', { class: 'nkcrp-warn', text: '⚠ ' + apiErrorText(code, result) })]);
 				});
 			});
 
 			candBtn.addEventListener('click', function () {
-				state.open = !state.open;
-				panel.style.display = state.open ? '' : 'none';
-				setBtn(candBtn, '🔍', state.open ? 'kandidáti ▴' : 'kandidáti ▾');
-				if (!state.open || panel.getAttribute('data-loaded')) return;
+				if (candPop.isOpen()) { candPop.close(); return; }
+				candPop.open();
+				setBtn(candBtn, '🔍', 'kandidáti ▴');
+				if (panel.getAttribute('data-loaded')) return;
 				panel.setAttribute('data-loaded', '1');
 				panel.textContent = '… hledám';
 				findCandidates(model).then(function (cands) {
@@ -631,11 +782,13 @@
 				});
 			});
 
-			box.appendChild(candBtn);
-			box.appendChild(mainBtn);
-			box.appendChild(unpairBtn);
-			box.appendChild(panel);
-			box.appendChild(status);
+			line.appendChild(candBtn);
+			line.appendChild(mainBtn);
+			line.appendChild(unpairBtn);
+			line.appendChild(busyMark);
+			box.appendChild(line);
+			box.appendChild(candPop.node);
+			box.appendChild(statusPop.node);
 			refresh();
 			box.nkcrpRefresh = refresh;
 		}
