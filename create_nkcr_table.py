@@ -26,6 +26,7 @@ class create_table:
         self.year: str = ''
         self.update_main_page: bool = True
         self.existing_auts = None
+        self.output_file = None
 
     def table_line(self, record, count, mydata):
         assert isinstance(record, AutRecord)
@@ -50,7 +51,7 @@ class create_table:
             'birth_qs': birth_to_table,
             'death_qs': death_to_table,
             'popis': record_in_nkcr.description,
-            'akce': nkcrlib.create_search_link(record_in_nkcr.name) + "&nbsp;/&nbsp;" + nkcrlib.create_quickstatements_link(
+            'akce': nkcrlib.create_search_link(nkcrlib.resolve_record_label(record_in_nkcr) or record_in_nkcr.name) + "&nbsp;/&nbsp;" + nkcrlib.create_quickstatements_link(
                 record_in_nkcr)
         }
 
@@ -359,4 +360,8 @@ class create_table:
 
         week_num = nkcrlib.get_week_num_to_download(week_num_force)
         printed_table = self._build_wiki_table(week_num)
+        output_file = self.output_file or 'nkcr_' + self.year + '_' + str(week_num) + '.wiki'
+        with open(output_file, 'w', encoding='utf-8') as f:
+            f.write(printed_table)
+        print('Wikitext uložen do ' + os.path.abspath(output_file))
         self.save_page(week_num, printed_table, quiet)
